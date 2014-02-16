@@ -8,7 +8,7 @@ from dctmpy.obj.typedobject import TypedObject
 
 
 class Collection(TypedObject):
-    attributes = ['collection', 'batchsize', 'records', 'more', 'persistent']
+    attributes = ['collection', 'batchsize', 'records', 'maybemore', 'persistent']
 
     def __init__(self, **kwargs):
         for attribute in Collection.attributes:
@@ -25,12 +25,12 @@ class Collection(TypedObject):
         if self.collection is None:
             return None
 
-        if isempty(self.buffer) and (self.more is None or self.more):
+        if isempty(self.buffer) and (self.maybemore is None or self.maybemore):
             response = self.session.next_batch(self.collection, self.batchsize)
             self.buffer = response.data
             self.records = response.records
-            self.more = response.more
-            if self.serializationversion > 0:
+            self.maybemore = response.maybemore
+            if self.serversion > 0:
                 self.__read_int__()
 
         if not isempty(self.buffer) and (self.records is None or self.records > 0):
@@ -122,7 +122,7 @@ class CollectionEntry(TypedObject):
 
     def __read__(self, buf=None):
         super(CollectionEntry, self).__read__(buf)
-        if self.serializationversion > 0:
+        if self.serversion > 0:
             self.__read_int__()
 
     def __getattr__(self, name):
@@ -143,12 +143,12 @@ class PersistentCollectionEntry(CollectionEntry):
         super(PersistentCollectionEntry, self).__init__(**kwargs)
 
     def __read_header__(self):
-        if not self.serializationversion > 0:
+        if not self.serversion > 0:
             self.__next_string__()
 
     def __read__(self, buf=None):
         super(PersistentCollectionEntry, self).__read__(buf)
-        if self.serializationversion > 0:
+        if self.serversion > 0:
             self.__read_int__()
 
     def __getattr__(self, name):

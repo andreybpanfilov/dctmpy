@@ -25,16 +25,17 @@ class DocbrokerClient(Netwise):
 
     def get_docbasemap(self):
         return DocbaseMap(
-            buffer=self.__request_object(DocbrokerClient.__docbasemap_request(version, handle))
+            buffer=self.__request_object__(DocbrokerClient.__docbasemap_request__(version, handle))
         )
 
     def get_servermap(self, docbase):
-        servermap = DocbaseMap(buffer=self.__request_object(DocbrokerClient.__servermap_request(version, handle, docbase)))
+        servermap = DocbaseMap(
+            buffer=self.__request_object__(DocbrokerClient.__servermap_request__(version, handle, docbase)))
         if not 'r_host_name' in servermap:
             raise RuntimeError("No servers for docbase %s on %s" % (docbase, parse_address(servermap['i_host_addr'])))
         return servermap
 
-    def __request_object(self, data):
+    def __request_object__(self, data):
         try:
             result = self.request(type=1, data=[data], immediate=True).receive().next()
         finally:
@@ -42,8 +43,8 @@ class DocbrokerClient(Netwise):
         return result
 
     @staticmethod
-    def __docbasemap_request(handle, version):
-        obj = TypedObject(serializationversion=0)
+    def __docbasemap_request__(handle, version):
+        obj = TypedObject(serversion=0)
         obj.add(AttrValue(name="DBR_REQUEST_NAME", type=STRING, values=["DBRN_GET_DOCBASE_MAP"]))
         obj.add(AttrValue(name="DBR_REQUEST_VERSION", type=INT, values=[1]))
         obj.add(AttrValue(name="DBR_REQUEST_HANDLE", type=STRING, values=[handle]))
@@ -51,8 +52,8 @@ class DocbrokerClient(Netwise):
         return obj
 
     @staticmethod
-    def __servermap_request(handle, version, docbase):
-        obj = TypedObject(serializationversion=0)
+    def __servermap_request__(handle, version, docbase):
+        obj = TypedObject(serversion=0)
         obj.add(AttrValue(name="r_docbase_name", type=STRING, values=[docbase]))
         obj.add(AttrValue(name="r_map_name", type=STRING, values=["mn_cs_map"]))
         obj.add(AttrValue(name="DBR_REQUEST_NAME", type=STRING, values=["DBRN_GET_SERVER_MAP"]))

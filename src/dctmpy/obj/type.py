@@ -9,14 +9,14 @@ from dctmpy.obj.typedobject import TypedObject
 
 class TypeObject(TypedObject):
     def __init__(self, **kwargs):
-        self.__typeCont = None
+        self.__type_count = None
         super(TypeObject, self).__init__(**kwargs)
 
     def __read__(self, buf=None):
         self.__read_header__()
         type_info = None
-        if self.__typeCont is not None:
-            for i in xrange(0, self.__typeCont):
+        if self.__type_count is not None:
+            for i in xrange(0, self.__type_count):
                 type_info = self.__deserialize_child_type__()
         else:
             while not isempty(self.buffer()):
@@ -24,17 +24,17 @@ class TypeObject(TypedObject):
         self.type = type_info
 
     def __deserialize_child_type__(self):
-        childType = self.__read_type__()
-        if childType is not None:
-            add_type_to_cache(childType)
-        return childType
+        child_type = self.__read_type__()
+        if child_type is not None:
+            add_type_to_cache(child_type)
+        return child_type
 
     def __read_type__(self):
         return super(TypeObject, self).__read_type__()
 
     def __read_header__(self):
-        self.__typeCont = self.__read_int__()
-        if self.serializationversion > 0:
+        self.__type_count = self.__read_int__()
+        if self.serversion > 0:
             self.__read_int__()
 
     def __need_read_type__(self):

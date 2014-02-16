@@ -7,18 +7,18 @@ from dctmpy import *
 
 
 class TypedObject(object):
-    attributes = ['session', 'type', 'buffer', 'serializationversion', 'iso8601time']
+    attributes = ['session', 'type', 'buffer', 'serversion', 'iso8601time']
 
     def __init__(self, **kwargs):
         for attribute in TypedObject.attributes:
             self.__setattr__(ATTRIBUTE_PREFIX + attribute, kwargs.pop(attribute, None))
         self.__attrs = {}
 
-        if self.serializationversion is None:
-            self.serializationversion = self.session.serializationversion
+        if self.serversion is None:
+            self.serversion = self.session.serversion
 
         if self.iso8601time is None:
-            if self.serializationversion == 2:
+            if self.serversion == 2:
                 self.iso8601time = self.session.iso8601time
             else:
                 self.iso8601time = False
@@ -41,11 +41,11 @@ class TypedObject(object):
             self.__read_object__()
 
     def __read_header__(self):
-        if self.serializationversion > 0:
-            serializationversion = self.__read_int__()
-            if serializationversion != self.serializationversion:
+        if self.serversion > 0:
+            serversion = self.__read_int__()
+            if serversion != self.serversion:
                 raise RuntimeError(
-                    "Invalid serialization version %d, expected %d" % (serializationversion, self.serializationversion))
+                    "Invalid serialization version %d, expected %d" % (serversion, self.serversion))
 
     def __read_type__(self):
         header = self.__next_token__()
@@ -68,7 +68,7 @@ class TypedObject(object):
         if type_name is None or len(type_name) == 0:
             raise ParserException("Wrong type name")
 
-        if self.serializationversion > 0:
+        if self.serversion > 0:
             self.__read_int__()
             self.__read_int__()
             self.__read_int__()
@@ -89,7 +89,7 @@ class TypedObject(object):
         repeating = self.type.get(position).repeating
         attr_type = self.type.get(position).type
 
-        if self.serializationversion == 2:
+        if self.serversion == 2:
             repeating = self.__next_string__(REPEATING_PATTERN) == REPEATING
             attr_type = TYPES[self.__read_int__()]
 
@@ -168,7 +168,7 @@ class TypedObject(object):
             'sharedparent': self.__if_d6(self.__next_string__, None, ATTRIBUTE_PATTERN),
             'aspectname': self.__if_d6(self.__next_string__, None, ATTRIBUTE_PATTERN),
             'aspectshareflag': self.__if_d6(self.__read_boolean__),
-            'serializationversion': self.serializationversion,
+            'serversion': self.serversion,
         })
 
     def __read_attr_info__(self):
@@ -182,16 +182,16 @@ class TypedObject(object):
         })
 
     def __if_d6(self, method, default=None, *args, **kwargs):
-        if self.serializationversion > 0:
+        if self.serversion > 0:
             return method(*args, **kwargs)
         return default
 
     def serialize(self):
         result = ""
-        if self.serializationversion > 0:
-            result += "%d\n" % self.serializationversion
+        if self.serversion > 0:
+            result += "%d\n" % self.serversion
         result += "OBJ NULL 0 "
-        if self.serializationversion > 0:
+        if self.serversion > 0:
             result += "0 0\n0\n"
         result += "%d\n" % len(self.__attrs)
         for attr_value in self.__attrs.values():
@@ -251,7 +251,7 @@ class TypedObject(object):
             value = value[1:]
         if value.startswith("xxx "):
             value = value[4:]
-        return parse_time(value, self.iso8601time)
+        return parse_time(value)
 
     def __read_boolean__(self):
         return bool(self.__next_string__(BOOLEAN_PATTERN))

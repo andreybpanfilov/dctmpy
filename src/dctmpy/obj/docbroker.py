@@ -11,7 +11,7 @@ class DocbrokerObject(TypedObject):
     def __init__(self, **kwargs):
         super(DocbrokerObject, self).__init__(**dict(
             kwargs,
-            **{'serializationversion': 0}
+            **{'serversion': 0}
         ))
 
     def __read_type__(self):

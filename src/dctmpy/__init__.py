@@ -222,6 +222,8 @@ DEFAULT_BATCH_SIZE = 20
 
 ATTRIBUTE_PREFIX = "__"
 
+ISO8601_REGEXP = "^([0-9]){4}(-([0-9]){2}){2}T([0-9]{2}:){2}([0-9]){2}Z"
+
 
 def get_platform_id():
     (system, release, version) = platform.system_alias(platform.system(), platform.release(), platform.version())
@@ -315,10 +317,10 @@ def parse_address(value):
     return chunks[4] + ":" + str(int(chunks[2], 16))
 
 
-def parse_time(value, iso8601_time=False):
+def parse_time(value):
     if isempty(value) or "nulldate" == value:
         return None
-    if iso8601_time:
+    if re.match(ISO8601_REGEXP, value) is not None:
         chunks = re.split("[-:TZ]", value)
         if len(chunks) != 7:
             raise ParserException("Invalid date: %s" % value)
@@ -499,7 +501,7 @@ class AttrValue(object):
 
 class TypeInfo(object):
     attributes = ['name', 'id', 'vstamp', 'version', 'cache', 'super', 'sharedparent', 'aspectname', 'aspectshareflag',
-                  'serializationversion']
+                  'serversion']
 
     def __init__(self, **kwargs):
         for attribute in TypeInfo.attributes:
@@ -523,7 +525,7 @@ class TypeInfo(object):
 
     def append(self, attrInfo):
         self.__attrs.append(attrInfo)
-        if self.serializationversion > 0:
+        if self.serversion > 0:
             if attrInfo.position is not None:
                 self.__positions[attrInfo.position] = attrInfo
             elif self.name != "GeneratedType":
@@ -531,14 +533,14 @@ class TypeInfo(object):
 
     def insert(self, index, attrInfo):
         self.__attrs.insert(index, attrInfo)
-        if self.serializationversion > 0:
+        if self.serversion > 0:
             if attrInfo.position is not None:
                 self.__positions[attrInfo.position] = attrInfo
             elif self.name != "GeneratedType":
                 raise RuntimeError("Empty position")
 
     def get(self, index):
-        if self.serializationversion > 0:
+        if self.serversion > 0:
             if self.name != "GeneratedType":
                 return self.__positions[index]
         return self.__attrs[index]

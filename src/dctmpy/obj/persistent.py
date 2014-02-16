@@ -15,7 +15,7 @@ class Persistent(TypedObject):
         type_name = self.__next_string__(ATTRIBUTE_PATTERN)
         self.__next_string__(ATTRIBUTE_PATTERN)
         stamp = 0
-        if self.serializationversion > 0:
+        if self.serversion > 0:
             stamp = self.__read_int__()
         return self.session.get_type(type_name, stamp)
 

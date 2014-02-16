@@ -59,7 +59,7 @@ class CheckDocbase(nagiosplugin.Resource):
 
     def check_sessions(self):
         try:
-            count = self.session.COUNT_SESSIONS()
+            count = self.session.count_sessions()
         except Exception, e:
             self.add_result(Critical, "Unable to retrieve session count: " + str(e))
             return
@@ -72,7 +72,7 @@ class CheckDocbase(nagiosplugin.Resource):
         server_name = self.session.serverconfig['object_name']
         docbase_name = self.session.docbaseconfig['object_name']
         try:
-            for target in self.session.LIST_TARGETS():
+            for target in self.session.list_targets():
                 targets.extend(zip(target['projection_targets'], target['projection_ports']))
         except Exception, e:
             message = "Unable to retrieve targets: %s" % str(e)
@@ -159,7 +159,7 @@ class CheckDocbase(nagiosplugin.Resource):
 
     def check_index_agent(self, index_name, agent_name):
         try:
-            result = self.session.FTINDEX_AGENT_ADMIN(
+            result = self.session.ftindex_agent_admin(
                 index_name, agent_name
             )
             status = result['status'][0]
@@ -191,7 +191,7 @@ class CheckDocbase(nagiosplugin.Resource):
                 raise RuntimeError("Wrong jobs argument")
 
         try:
-            now = self.session.TIME()
+            now = self.session.time()
         except Exception, e:
             message = "Unable to acquire current time: %s" % str(e)
             self.add_result(Critical, message)
