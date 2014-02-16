@@ -11,16 +11,16 @@ class Persistent(TypedObject):
     def __init__(self, **kwargs):
         super(Persistent, self).__init__(**kwargs)
 
-    def readType(self):
-        typeName = self.nextString(ATTRIBUTE_PATTERN)
-        self.nextString(ATTRIBUTE_PATTERN)
-        vstamp = 0
+    def __read_type__(self):
+        type_name = self.__next_string__(ATTRIBUTE_PATTERN)
+        self.__next_string__(ATTRIBUTE_PATTERN)
+        stamp = 0
         if self.serializationversion > 0:
-            vstamp = self.readInt()
-        return self.session.fetchType(typeName, vstamp)
+            stamp = self.__read_int__()
+        return self.session.get_type(type_name, stamp)
 
-    def readObject(self):
-        return super(Persistent, self).readObject()
+    def __read_object__(self):
+        return super(Persistent, self).__read_object__()
 
 
 

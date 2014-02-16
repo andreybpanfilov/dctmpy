@@ -8,32 +8,32 @@ from dctmpy.obj.typedobject import TypedObject
 
 
 class Collection(TypedObject):
-    fields = ['collection', 'batchsize', 'records', 'more', 'persistent']
+    attributes = ['collection', 'batchsize', 'records', 'more', 'persistent']
 
     def __init__(self, **kwargs):
-        for attribute in Collection.fields:
+        for attribute in Collection.attributes:
             self.__setattr__(ATTRIBUTE_PREFIX + attribute, kwargs.pop(attribute, None))
         super(Collection, self).__init__(**kwargs)
 
-    def needReadType(self):
+    def __need_read_type__(self):
         return True
 
-    def needReadObject(self):
+    def __need_read_object__(self):
         return False
 
-    def nextRecord(self):
+    def next_record(self):
         if self.collection is None:
             return None
 
-        if isEmpty(self.buffer) and (self.more is None or self.more):
-            response = self.session.nextBatch(self.collection, self.batchsize)
+        if isempty(self.buffer) and (self.more is None or self.more):
+            response = self.session.next_batch(self.collection, self.batchsize)
             self.buffer = response.data
             self.records = response.records
             self.more = response.more
             if self.serializationversion > 0:
-                self.readInt()
+                self.__read_int__()
 
-        if not isEmpty(self.buffer) and (self.records is None or self.records > 0):
+        if not isempty(self.buffer) and (self.records is None or self.records > 0):
             try:
                 cls = [CollectionEntry, PersistentCollectionEntry][self.persistent]
                 entry = cls(session=self.session, type=self.type, buffer=self.buffer)
@@ -58,7 +58,7 @@ class Collection(TypedObject):
                 return self
 
             def next(self):
-                r = self.obj.nextRecord()
+                r = self.obj.next_record()
                 if r is None:
                     raise StopIteration
                 else:
@@ -67,13 +67,13 @@ class Collection(TypedObject):
         return iterator(self)
 
     def __getattr__(self, name):
-        if name in Collection.fields:
+        if name in Collection.attributes:
             return self.__getattribute__(ATTRIBUTE_PREFIX + name)
         else:
             return super(Collection, self).__getattr__(name)
 
     def __setattr__(self, name, value):
-        if name in Collection.fields:
+        if name in Collection.attributes:
             Collection.__setattr__(self, ATTRIBUTE_PREFIX + name, value)
         else:
             super(Collection, self).__setattr__(name, value)
@@ -81,7 +81,7 @@ class Collection(TypedObject):
     def close(self):
         try:
             if self.collection > 0:
-                self.session.closeCollection(self.collection)
+                self.session.close_collection(self.collection)
         finally:
             self.collection = None
 
@@ -93,18 +93,18 @@ class PersistentCollection(Collection):
     def __init__(self, **kwargs):
         super(PersistentCollection, self).__init__(**kwargs)
 
-    def read(self, buf=None):
-        if isEmpty(buf) and isEmpty(self.buffer):
+    def __read__(self, buf=None):
+        if isempty(buf) and isempty(self.buffer):
             raise ParserException("Empty data")
-        if not isEmpty(buf):
+        if not isempty(buf):
             self.buffer = buf
-        self.type = self.session.fetchType(self.nextString(), 0)
+        self.type = self.session.get_type(self.__next_string__(), 0)
 
-    def needReadType(self):
+    def __need_read_type__(self):
         return False
 
-    def nextRecord(self):
-        return super(PersistentCollection, self).nextRecord()
+    def next_record(self):
+        return super(PersistentCollection, self).next_record()
 
     def __getattr__(self, name):
         return super(PersistentCollection, self).__getattr__(name)
@@ -117,22 +117,22 @@ class CollectionEntry(TypedObject):
     def __init__(self, **kwargs):
         super(CollectionEntry, self).__init__(**kwargs)
 
-    def readHeader(self):
+    def __read_header__(self):
         pass
 
-    def read(self, buf=None):
-        super(CollectionEntry, self).read(buf)
+    def __read__(self, buf=None):
+        super(CollectionEntry, self).__read__(buf)
         if self.serializationversion > 0:
-            self.readInt()
+            self.__read_int__()
 
     def __getattr__(self, name):
-        if name in CollectionEntry.fields:
+        if name in CollectionEntry.attributes:
             return self.__getattribute__(ATTRIBUTE_PREFIX + name)
         else:
             return super(CollectionEntry, self).__getattr__(name)
 
     def __setattr__(self, name, value):
-        if name in CollectionEntry.fields:
+        if name in CollectionEntry.attributes:
             CollectionEntry.__setattr__(self, ATTRIBUTE_PREFIX + name, value)
         else:
             super(CollectionEntry, self).__setattr__(name, value)
@@ -142,14 +142,14 @@ class PersistentCollectionEntry(CollectionEntry):
     def __init__(self, **kwargs):
         super(PersistentCollectionEntry, self).__init__(**kwargs)
 
-    def readHeader(self):
+    def __read_header__(self):
         if not self.serializationversion > 0:
-            self.nextString()
+            self.__next_string__()
 
-    def read(self, buf=None):
-        super(PersistentCollectionEntry, self).read(buf)
+    def __read__(self, buf=None):
+        super(PersistentCollectionEntry, self).__read__(buf)
         if self.serializationversion > 0:
-            self.readInt()
+            self.__read_int__()
 
     def __getattr__(self, name):
         return super(PersistentCollectionEntry, self).__getattr__(name)

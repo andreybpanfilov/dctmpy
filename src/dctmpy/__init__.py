@@ -223,7 +223,7 @@ DEFAULT_BATCH_SIZE = 20
 ATTRIBUTE_PREFIX = "__"
 
 
-def getPlatformId():
+def get_platform_id():
     (system, release, version) = platform.system_alias(platform.system(), platform.release(), platform.version())
     if re.match("windows", system, re.I) is not None or re.match("windows", release, re.I) is not None:
         return PLATFORMS['MS_WINDOWS']
@@ -239,7 +239,7 @@ def getPlatformId():
         return 0
 
 
-def getCharsetId():
+def get_charset_id():
     (system, release, version) = platform.system_alias(platform.system(), platform.release(), platform.version())
     data = re.split("_|\.|@?", locale.setlocale(locale.LC_ALL, ''))
     data[2] = data[2].replace("_", "-").upper()
@@ -252,7 +252,7 @@ def getCharsetId():
         return 0
 
 
-def getLocaleId():
+def get_locale_id():
     data = re.split("_|\.|@", locale.setlocale(locale.LC_ALL, ''))
     if data[0] + "_" + data[1] in SHORT_LOCALES:
         return SHORT_LOCALES[data[0] + "_" + data[1]]
@@ -266,24 +266,24 @@ def getLocaleId():
         return LONG_LOCALES['Unknown']
 
 
-def getOffsetInSeconds():
+def get_offset_in_seconds():
     t = time.time()
     return int(time.mktime(time.gmtime(t)) - time.mktime(time.localtime(t)))
 
 
-def stringToIntegerArray(string):
+def string_to_integer_array(string):
     b = array.array("B")
     b.fromstring(string)
     return b.tolist()
 
 
-def integerArrayToString(data):
+def integer_array_to_string(data):
     b = array.array("B")
     b.extend(data)
     return b.tostring()
 
 
-def isEmpty(value):
+def isempty(value):
     if value is None:
         return True
     if isinstance(value, str):
@@ -306,8 +306,8 @@ def isEmpty(value):
     return False
 
 
-def parseAddr(value):
-    if isEmpty(value):
+def parse_address(value):
+    if isempty(value):
         raise ParserException("Invalid address: %s" % value)
     if not value.startswith("INET_ADDR"):
         raise ParserException("Invalid address: %s" % value)
@@ -315,10 +315,10 @@ def parseAddr(value):
     return chunks[4] + ":" + str(int(chunks[2], 16))
 
 
-def parseTime(value, iso8601Time=False):
-    if isEmpty(value) or "nulldate" == value:
+def parse_time(value, iso8601_time=False):
+    if isempty(value) or "nulldate" == value:
         return None
-    if iso8601Time:
+    if iso8601_time:
         chunks = re.split("[-:TZ]", value)
         if len(chunks) != 7:
             raise ParserException("Invalid date: %s" % value)
@@ -335,15 +335,15 @@ def parseTime(value, iso8601Time=False):
              -1])
 
 
-def getTypeFormCache(attrName):
+def get_type_from_cache(attrName):
     return TypeCache().get(attrName)
 
 
-def addTypeToCache(typeObj):
+def add_type_to_cache(typeObj):
     TypeCache().add(typeObj)
 
 
-def intToPseudoBase64(value):
+def int_to_pseudo_base64(value):
     result = ""
     while value >= 64:
         result += ENCODE.get(value % 64)
@@ -352,7 +352,7 @@ def intToPseudoBase64(value):
     return result
 
 
-def pseudoBase64ToInt(value):
+def pseudo_base64_to_int(value):
     result = 0
     for c in list(value)[::-1]:
         if c not in DECODE:
@@ -403,33 +403,33 @@ class TypeCache:
 
 
 class AttrInfo(object):
-    fields = ['position', 'name', 'type', 'repeating', 'length', 'restriction']
+    attributes = ['position', 'name', 'type', 'repeating', 'length', 'restriction']
 
     def __init__(self, **kwargs):
-        for attribute in AttrInfo.fields:
+        for attribute in AttrInfo.attributes:
             self.__setattr__(ATTRIBUTE_PREFIX + attribute, kwargs.pop(attribute, None))
 
     def clone(self):
-        return AttrInfo(**dict((x, self.__getattr__(x)) for x in AttrInfo.fields))
+        return AttrInfo(**dict((x, self.__getattr__(x)) for x in AttrInfo.attributes))
 
     def __getattr__(self, name):
-        if name in AttrInfo.fields:
+        if name in AttrInfo.attributes:
             return self.__getattribute__(ATTRIBUTE_PREFIX + name)
         else:
-            raise AttributeError
+            raise AttributeError("Unknown attribute %s in %s" % (name, str(self.__class__)))
 
     def __setattr__(self, name, value):
-        if name in AttrInfo.fields:
+        if name in AttrInfo.attributes:
             AttrInfo.__setattr__(self, ATTRIBUTE_PREFIX + name, value)
         else:
             super(AttrInfo, self).__setattr__(name, value)
 
 
 class AttrValue(object):
-    fields = ['name', 'type', 'length', 'repeating', 'values']
+    attributes = ['name', 'type', 'length', 'repeating', 'values']
 
     def __init__(self, **kwargs):
-        for attribute in AttrValue.fields:
+        for attribute in AttrValue.attributes:
             self.__setattr__(ATTRIBUTE_PREFIX + attribute, kwargs.pop(attribute, None))
         if self.values is None:
             self.values = []
@@ -441,13 +441,13 @@ class AttrValue(object):
             self.length = 0
 
     def __getattr__(self, name):
-        if name in AttrValue.fields:
+        if name in AttrValue.attributes:
             return self.__getattribute__(ATTRIBUTE_PREFIX + name)
         else:
-            raise AttributeError
+            raise AttributeError("Unknown attribute %s in %s" % (name, str(self.__class__)))
 
     def __setattr__(self, name, value):
-        if name in AttrValue.fields:
+        if name in AttrValue.attributes:
             AttrValue.__setattr__(self, ATTRIBUTE_PREFIX + name, value)
         else:
             super(AttrValue, self).__setattr__(name, value)
@@ -498,25 +498,25 @@ class AttrValue(object):
 
 
 class TypeInfo(object):
-    fields = ['name', 'id', 'vstamp', 'version', 'cache', 'super', 'sharedparent', 'aspectname', 'aspectshareflag',
-              'serializationversion']
+    attributes = ['name', 'id', 'vstamp', 'version', 'cache', 'super', 'sharedparent', 'aspectname', 'aspectshareflag',
+                  'serializationversion']
 
     def __init__(self, **kwargs):
-        for attribute in TypeInfo.fields:
+        for attribute in TypeInfo.attributes:
             self.__setattr__(ATTRIBUTE_PREFIX + attribute, kwargs.pop(attribute, None))
         self.__attrs = []
         self.__positions = {}
 
     def __getattr__(self, name):
-        if name in TypeInfo.fields:
+        if name in TypeInfo.attributes:
             return self.__getattribute__(ATTRIBUTE_PREFIX + name)
         elif name == "attributes":
             return self.__attrs
         else:
-            raise AttributeError
+            raise AttributeError("Unknown attribute %s in %s" % (name, str(self.__class__)))
 
     def __setattr__(self, name, value):
-        if name in TypeInfo.fields:
+        if name in TypeInfo.attributes:
             TypeInfo.__setattr__(self, ATTRIBUTE_PREFIX + name, value)
         else:
             super(TypeInfo, self).__setattr__(name, value)
@@ -546,8 +546,8 @@ class TypeInfo(object):
     def count(self):
         return len(self.__attrs)
 
-    def extend(self, typeInfo):
-        if self.super == typeInfo.name:
-            for i in typeInfo.attributes[::-1]:
+    def extend(self, type_info):
+        if self.super == type_info.name:
+            for i in type_info.__attrs[::-1]:
                 self.insert(0, i.clone())
-            self.super = typeInfo.super
+            self.super = type_info.super

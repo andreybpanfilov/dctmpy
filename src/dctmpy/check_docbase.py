@@ -1,10 +1,13 @@
 #!python
 import argparse
 import re
+
 import nagiosplugin
 from nagiosplugin.state import Critical, Warn, Ok, Unknown
+
 from dctmpy.docbaseclient import DocbaseClient
 from dctmpy.docbrokerclient import DocbrokerClient
+
 
 JOB_ATTRIBUTES = ['object_name', 'is_inactive', 'a_last_invocation',
                   'a_last_completion', 'a_last_return_code', 'a_current_status',
@@ -36,7 +39,7 @@ class CheckDocbase(nagiosplugin.Resource):
     def probe(self):
         yield nagiosplugin.Metric("null", 0, context='null')
         try:
-            self.checkLogin()
+            self.check_login()
             if not self.session:
                 return
             if self.mode == 'login':
@@ -54,59 +57,59 @@ class CheckDocbase(nagiosplugin.Resource):
             except Exception, e:
                 pass
 
-    def checkSessions(self):
+    def check_sessions(self):
         try:
             count = self.session.COUNT_SESSIONS()
         except Exception, e:
-            self.addResult(Critical, "Unable to retrieve session count: " + str(e))
+            self.add_result(Critical, "Unable to retrieve session count: " + str(e))
             return
         yield nagiosplugin.Metric('sessioncount', int(count['hot_list_size']), min=0,
                                   max=int(count['concurrent_sessions']),
                                   context='sessioncount')
 
-    def checkTargets(self):
+    def check_targets(self):
         targets = []
-        servername = self.session.serverconfig['object_name']
-        docbaseame = self.session.docbaseconfig['object_name']
+        server_name = self.session.serverconfig['object_name']
+        docbase_name = self.session.docbaseconfig['object_name']
         try:
             for target in self.session.LIST_TARGETS():
                 targets.extend(zip(target['projection_targets'], target['projection_ports']))
         except Exception, e:
             message = "Unable to retrieve targets: %s" % str(e)
-            self.addResult(Critical, message)
+            self.add_result(Critical, message)
             return
 
         for (host, port) in targets:
-            self.checkRegistration(host, port, docbaseame, servername)
+            self.check_registration(host, port, docbase_name, server_name)
 
-    def checkRegistration(self, docbrokerhost, docbrokerport, docbaseame, servername):
+    def check_registration(self, docbrokerhost, docbrokerport, docbaseame, servername):
         docbroker = DocbrokerClient(host=docbrokerhost, port=docbrokerport)
 
         try:
-            docbasemap = docbroker.getDocbaseMap()
+            docbasemap = docbroker.get_docbasemap()
         except Exception, e:
             message = "Unable to retrieve docbasemap from docbroker %s:%d: %s" % (
                 docbrokerhost, docbrokerport, str(e))
-            self.addResult(Critical, message)
+            self.add_result(Critical, message)
             return
 
         if not docbaseame in docbasemap['r_docbase_name']:
             message = "docbase %s is not registered on %s:%d" % (docbaseame, docbrokerhost, docbrokerport)
-            self.addResult(Critical, message)
+            self.add_result(Critical, message)
             return
 
         try:
-            servermap = docbroker.getServerMap(docbaseame)
+            servermap = docbroker.get_servermap(docbaseame)
         except Exception, e:
             message = "Unable to retrieve servermap from docbroker %s:%d: %s" % (
                 docbrokerhost, docbrokerport, str(e))
-            self.addResult(Critical, message)
+            self.add_result(Critical, message)
             return
 
         if not servername in servermap['r_server_name']:
             message = "server %s.%s is not registered on %s:%d" % (
                 docbaseame, servername, docbrokerhost, docbrokerport)
-            self.addResult(Critical, message)
+            self.add_result(Critical, message)
             return
 
         index = servermap['r_server_name'].index(servername)
@@ -117,7 +120,7 @@ class CheckDocbase(nagiosplugin.Resource):
         if status != "Open":
             message = "%s.%s has status %s on %s:%d, " % (
                 docbaseame, servername, status, docbrokerhost, docbrokerport)
-            self.addResult(Critical, message)
+            self.add_result(Critical, message)
             return
 
         chunks = connaddr.split(" ")
@@ -129,11 +132,11 @@ class CheckDocbase(nagiosplugin.Resource):
             session = DocbaseClient(host=host, port=port, docbaseid=docbaseid)
             message = "%s.%s has status %s on %s:%d" % (
                 docbaseame, servername, status, docbrokerhost, docbrokerport)
-            self.addResult(Ok, message)
+            self.add_result(Ok, message)
         except Exception, e:
             message = "%s.%s has status %s on %s:%d, but error occurred during connection to %s" % (
                 docbaseame, servername, status, docbrokerhost, docbrokerport, str(e))
-            self.addResult(Critical, message)
+            self.add_result(Critical, message)
             return
         if session is not None:
             try:
@@ -141,49 +144,49 @@ class CheckDocbase(nagiosplugin.Resource):
             except Exception, e:
                 pass
 
-    def checkIndexAgents(self):
+    def check_index_agents(self):
         try:
             count = 0
-            for index in CheckDocbase.getIndexes(self.session):
+            for index in CheckDocbase.get_indexes(self.session):
                 count += 1
-                self.checkIndexAgent(index['index_name'], index['object_name'])
+                self.check_index_agent(index['index_name'], index['object_name'])
             if count == 0:
                 message = "No indexagents"
-                self.addResult(Warn, message)
+                self.add_result(Warn, message)
         except Exception, e:
             message = "Unable to execute query: %s" % str(e)
-            self.addResult(Critical, message)
+            self.add_result(Critical, message)
 
-    def checkIndexAgent(self, indexname, agentname):
+    def check_index_agent(self, index_name, agent_name):
         try:
             result = self.session.FTINDEX_AGENT_ADMIN(
-                indexname, agentname
+                index_name, agent_name
             )
             status = result['status'][0]
             if status == 0:
-                message = "Indexagent %s/%s is up and running" % (indexname, agentname)
-                self.addResult(Ok, message)
+                message = "Indexagent %s/%s is up and running" % (index_name, agent_name)
+                self.add_result(Ok, message)
             elif status == 100:
-                message = "Indexagent %s/%s is stopped" % (indexname, agentname)
-                self.addResult(Warn, message)
+                message = "Indexagent %s/%s is stopped" % (index_name, agent_name)
+                self.add_result(Warn, message)
             elif status == 200:
-                message = "A problem with indexagent %s/%s" % (indexname, agentname)
-                self.addResult(Critical, message)
+                message = "A problem with indexagent %s/%s" % (index_name, agent_name)
+                self.add_result(Critical, message)
             else:
-                message = "Indexagent %s/%s has unknown status" % (indexname, agentname)
-                self.addResult(Unknown, message)
+                message = "Indexagent %s/%s has unknown status" % (index_name, agent_name)
+                self.add_result(Unknown, message)
         except Exception, e:
             message = "Unable to get indexagent %s/%s status: %s" % (
-                indexname, agentname, str(e))
-            self.addResult(Critical, message)
+                index_name, agent_name, str(e))
+            self.add_result(Critical, message)
 
-    def checkJobs(self):
-        jobstocheck = None
-        if not CheckDocbase.isEmpty(self.jobs):
+    def check_jobs(self):
+        jobs_to_check = None
+        if not CheckDocbase.is_empty(self.jobs):
             if isinstance(self.jobs, list):
-                jobstocheck = list(self.jobs)
+                jobs_to_check = list(self.jobs)
             elif isinstance(self.jobs, str):
-                jobstocheck = re.split(",\s*", self.jobs)
+                jobs_to_check = re.split(",\s*", self.jobs)
             else:
                 raise RuntimeError("Wrong jobs argument")
 
@@ -191,178 +194,179 @@ class CheckDocbase(nagiosplugin.Resource):
             now = self.session.TIME()
         except Exception, e:
             message = "Unable to acquire current time: %s" % str(e)
-            self.addResult(Critical, message)
+            self.add_result(Critical, message)
             return
 
         try:
-            for job in CheckDocbase.getJobs(self.session, jobstocheck):
-                if jobstocheck is not None and job['object_name'] in jobstocheck:
-                    jobstocheck.remove(job['object_name'])
-                self.checkJob(job, now)
+            for job in CheckDocbase.get_jobs(self.session, jobs_to_check):
+                if jobs_to_check is not None and job['object_name'] in jobs_to_check:
+                    jobs_to_check.remove(job['object_name'])
+                self.check_job(job, now)
         except Exception, e:
             message = "Unable to execute query: %s" % str(e)
-            self.addResult(Critical, message)
+            self.add_result(Critical, message)
             return
 
-        if not CheckDocbase.isEmpty(jobstocheck):
+        if not CheckDocbase.is_empty(jobs_to_check):
             message = ""
-            for job in jobstocheck:
+            for job in jobs_to_check:
                 message += "%s not found, " % job
-            self.addResult(Critical, message)
+            self.add_result(Critical, message)
 
-    def checkJob(self, job, now):
+    def check_job(self, job, now):
         if job['start_date'] is None or job['start_date'] <= 0:
             message = "%s has undefined start_date" % job['object_name']
-            self.addResult(Critical, message)
+            self.add_result(Critical, message)
             return
         if job['a_next_invocation'] is None or job['a_next_invocation'] <= 0:
             message = "%s has undefined next_invocation_date" % job['object_name']
-            self.addResult(Critical, message)
+            self.add_result(Critical, message)
             return
         if job['expiration_date'] is not None and job['expiration_date'] < job['start_date']:
             message = "%s has expiration_date less then start_date" % job['object_name']
-            self.addResult(Critical, message)
+            self.add_result(Critical, message)
             return
         if job['max_iterations'] < 0:
             message = "%s has invalid max_iterations value: %d" % (
                 (job['object_name']), (job['max_iterations']))
-            self.addResult(Critical, message)
+            self.add_result(Critical, message)
             return
         if job['run_mode'] == 0 and job['run_interval'] == 0 and job['max_iterations'] != 1:
             message = "%s has invalid max_iterations value for run_mode=0 and run_interval=0" % job[
                 'object_name']
-            self.addResult(Critical, message)
+            self.add_result(Critical, message)
             return
         if job['run_mode'] in [1, 2, 3, 4] and not (1 <= job['run_interval'] <= 32767):
             message = "%s has invalid run_interval value, expected [1, 32767], got %d" % (
                 (job['object_name']), (job['run_interval']))
-            self.addResult(Critical, message)
+            self.add_result(Critical, message)
             return
         if job['run_mode'] == 7 and not (-7 <= job['run_interval'] <= 7 and job['run_interval'] != 0):
             message = "%s has invalid run_interval value, expected [-7,0) U (0,7], got %d" % (
                 (job['object_name']), (job['run_interval']))
-            self.addResult(Critical, message)
+            self.add_result(Critical, message)
             return
         if job['run_mode'] == 8 and not (-28 <= job['run_interval'] <= 28 and job['run_interval'] != 0):
             message = "%s has invalid run_interval value, expected [-28,0) U (0,28], got %d" % (
                 (job['object_name']), (job['run_interval']))
-            self.addResult(Critical, message)
+            self.add_result(Critical, message)
             return
         if job['run_mode'] == 9 and not (-365 <= job['run_interval'] <= 365 and job['run_interval'] != 0):
             message = "%s has invalid run_interval value, expected [-365,0) U (0,365], got %d" % (
                 (job['object_name']), (job['run_interval']))
-            self.addResult(Critical, message)
+            self.add_result(Critical, message)
             return
         if job['is_inactive']:
             message = "%s is inactive" % job['object_name']
-            self.addResult(Critical, message)
+            self.add_result(Critical, message)
             return
         if job['expiration_date'] is not None and now > job['expiration_date']:
             message = "%s is expired" % job['object_name']
-            self.addResult(Critical, message)
+            self.add_result(Critical, message)
             return
         if 0 < job['max_iterations'] < job['a_iterations']:
             message = "%s max iterations exceeded" % job['object_name']
-            self.addResult(Critical, message)
+            self.add_result(Critical, message)
             return
         if job['a_last_invocation'] is None:
             message = "%s has been never executed" % job['object_name']
-            self.addResult(Warn, message)
+            self.add_result(Warn, message)
             return
         if job['a_last_return_code'] != 0:
             message = "%s has status: %s" % ((job['object_name']), (job['a_current_status']))
-            self.addResult(Critical, message)
+            self.add_result(Critical, message)
             return
         if re.search('agentexec', job['a_special_app']) is not None or (
                     job['a_last_invocation'] is not None and job['a_last_completion'] is None):
             message = "%s is running for %s" % (
-                (job['object_name']), CheckDocbase.prettyInterval(now - job['a_last_invocation']))
-            self.addResult(Ok, message)
+                (job['object_name']), CheckDocbase.pretty_interval(now - job['a_last_invocation']))
+            self.add_result(Ok, message)
             return
 
-        timegap = now - job['a_last_completion']
+        time_diff = now - job['a_last_completion']
 
         if job['run_mode'] in [1, 2, 3, 4]:
-            message = "%s last run - %s ago" % ((job['object_name']), CheckDocbase.prettyInterval(timegap))
-            if timegap > 2 * JOB_INTERVALS[job['run_mode']] * job['run_interval']:
-                self.addResult(Critical, message)
+            message = "%s last run - %s ago" % ((job['object_name']), CheckDocbase.pretty_interval(time_diff))
+            if time_diff > 2 * JOB_INTERVALS[job['run_mode']] * job['run_interval']:
+                self.add_result(Critical, message)
                 return
-            elif timegap > JOB_INTERVALS[job['run_mode']] * job['run_interval']:
-                self.addResult(Warn, message)
+            elif time_diff > JOB_INTERVALS[job['run_mode']] * job['run_interval']:
+                self.add_result(Warn, message)
                 return
             else:
-                self.addResult(Ok, message)
+                self.add_result(Ok, message)
                 return
         else:
             message = "Scheduling type for job %s is not currently supported" % job['object_name']
-            self.addResult(Critical, message)
+            self.add_result(Critical, message)
             return
 
-    def checkTimeSkew(self):
+    def check_time_skew(self):
         ''
 
-    def checkQuery(self):
+    def check_query(self):
         ''
 
-    def checkCountQuery(self):
+    def check_count_query(self):
         ''
 
-    def checkWorkQueue(self):
+    def check_work_queue(self):
         query = "SELECT count(r_object_id) AS work_queue_size FROM dmi_workitem " \
                 "WHERE r_runtime_state IN (0, 1) " \
                 "AND r_auto_method_id > '0000000000000000' " \
                 "AND a_wq_name is NULLSTRING"
         try:
-            result = CheckDocbase.readObject(self.session, query)
+            result = CheckDocbase.read_object(self.session, query)
             yield nagiosplugin.Metric('workqueue', int(result['work_queue_size']), min=0, context='workqueue')
         except Exception, e:
             message = "Unable to execute query: %s" % str(e)
-            self.addResult(Critical, message)
+            self.add_result(Critical, message)
 
-    def checkServerWorkQueue(self):
-        serverid = self.session.serverconfig['r_object_id']
-        servername = self.session.serverconfig['object_name']
+    def check_server_work_queue(self):
+        server_id = self.session.serverconfig['r_object_id']
+        server_name = self.session.serverconfig['object_name']
         query = "SELECT count(r_object_id) AS work_queue_size FROM dmi_workitem " \
                 "WHERE r_runtime_state IN (0, 1) " \
                 "AND r_auto_method_id > '0000000000000000' " \
-                "AND a_wq_name ='" + serverid + "'"
+                "AND a_wq_name ='" + server_id + "'"
         try:
-            result = CheckDocbase.readObject(self.session, query)
-            yield nagiosplugin.Metric(servername[-20:], int(result['work_queue_size']), min=0,
+            result = CheckDocbase.read_object(self.session, query)
+            yield nagiosplugin.Metric(server_name[-20:], int(result['work_queue_size']), min=0,
                                       context='serverworkqueue')
         except Exception, e:
             message = "Unable to execute query: %s" % str(e)
-            self.addResult(Critical, message)
+            self.add_result(Critical, message)
 
-    def checkFulltextQueue(self):
+    def check_fulltext_queue(self):
         try:
             count = 0
-            for user in CheckDocbase.readQuery(self.session, "select distinct queue_user from dm_ftindex_agent_config"):
+            for user in CheckDocbase.read_query(self.session,
+                                                "select distinct queue_user from dm_ftindex_agent_config"):
                 count += 1
-                self.checkFulltextQueue(user['queue_user'])
+                self.check_fulltext_queue(user['queue_user'])
             if count == 0:
                 message = "No indexagents"
-                self.addResult(Warn, message)
+                self.add_result(Warn, message)
         except Exception, e:
             message = "Unable to execute query: %s" % str(e)
-            self.addResult(Critical, message)
+            self.add_result(Critical, message)
 
-    def checkFulltextQueue(self, username):
+    def check_fulltext_queue(self, username):
         query = "SELECT count(r_object_id) AS queue_size FROM dmi_queue_item WHERE name='" \
                 + username + "'AND task_state not in ('failed','warning')"
         try:
-            result = CheckDocbase.readObject(self.session, query)
+            result = CheckDocbase.read_object(self.session, query)
             yield nagiosplugin.Metric(username[-20:], int(result['queue_size']), min=0,
                                       context='indexqueue')
         except Exception, e:
             message = "Unable to execute query: %s" % str(e)
-            self.addResult(Critical, message)
+            self.add_result(Critical, message)
 
-    def checkFailedTasks(self):
+    def check_failed_tasks(self):
         try:
             count = 0
             message = ""
-            for rec in CheckDocbase.getFailedTasks(self.session):
+            for rec in CheckDocbase.get_failed_tasks(self.session):
                 count += 1
                 if count > 1:
                     message += ", "
@@ -370,17 +374,17 @@ class CheckDocbase(nagiosplugin.Resource):
 
             if count > 0:
                 message = "%d task(s): %s" % (count, message)
-                self.addResult(Critical, message)
+                self.add_result(Critical, message)
         except Exception, e:
             message = "Unable to execute query: %s" % str(e)
-            self.addResult(Critical, message)
+            self.add_result(Critical, message)
 
-    def checkLogin(self):
+    def check_login(self):
         try:
             session = DocbaseClient(host=self.host, port=self.port, docbaseid=self.docbaseid)
         except Exception, e:
             message = "Unable to connect to docbase: %s" % str(e)
-            self.addResult(Critical, message)
+            self.add_result(Critical, message)
             return
 
         if self.login and self.authentication:
@@ -388,7 +392,7 @@ class CheckDocbase(nagiosplugin.Resource):
                 session.authenticate(self.login, self.authentication)
             except Exception, e:
                 message = "Unable to authenticate: %s" % str(e)
-                self.addResult(Critical, message)
+                self.add_result(Critical, message)
                 try:
                     session.disconnect()
                 except Exception, e:
@@ -398,27 +402,27 @@ class CheckDocbase(nagiosplugin.Resource):
         else:
             message = ["No username provided", "No password provided"][not self.authentication]
             status = [Warn, Critical][self.mode != 'login']
-            self.addResult(status, message)
+            self.add_result(status, message)
 
-    def addResult(self, state, message):
+    def add_result(self, state, message):
         self.results.add(nagiosplugin.Result(state, message))
 
     def __getattr__(self, name):
         if hasattr(self.args, name):
             return getattr(self.args, name)
         else:
-            return AttributeError
+            return AttributeError("Unknown attribute %s in %s" % (name, str(self.__class__)))
 
     @staticmethod
-    def getIndexes(session):
+    def get_indexes(session):
         query = "select index_name, a.object_name " \
                 "from dm_fulltext_index i, dm_ftindex_agent_config a " \
                 "where i.index_name=a.index_name " \
                 "and a.force_inactive = false"
-        return CheckDocbase.readQuery(session, query)
+        return CheckDocbase.read_query(session, query)
 
     @staticmethod
-    def readQuery(session, query, cnt=0):
+    def read_query(session, query, cnt=0):
         col = None
         try:
             read = 0
@@ -433,25 +437,25 @@ class CheckDocbase(nagiosplugin.Resource):
                 col.close()
 
     @staticmethod
-    def readObject(session, query):
-        results = CheckDocbase.readQuery(session, query, 1)
+    def read_object(session, query):
+        results = CheckDocbase.read_query(session, query, 1)
         if results:
             for rec in results:
                 return rec
 
     @staticmethod
-    def getJobs(session, jobs=None, condition=""):
+    def get_jobs(session, jobs=None, condition=""):
         query = JOB_QUERY + condition
         if jobs is not None:
             query += " AND object_name IN ('" + "','".join(jobs) + "')"
-        return CheckDocbase.readQuery(session, query)
+        return CheckDocbase.read_query(session, query)
 
     @staticmethod
-    def getRunningJobs(session):
-        return CheckDocbase.getJobs(session, JOB_ACTIVE_CONDITION)
+    def get_running_jobs(session):
+        return CheckDocbase.get_jobs(session, JOB_ACTIVE_CONDITION)
 
     @staticmethod
-    def getFailedTasks(session, offset=None):
+    def get_failed_tasks(session, offset=None):
         query = "SELECT que.task_name, que.name" \
                 " FROM dmi_queue_item que, dmi_workitem wi, dmi_package pkg" \
                 " WHERE que.event = 'dm_changedactivityinstancestate'" \
@@ -463,11 +467,11 @@ class CheckDocbase(nagiosplugin.Resource):
                 " AND que.delete_flag = 0"
         if offset is not None:
             query += " que.date_sent > date(now) - %d " % offset
-        return CheckDocbase.readQuery(session, query)
+        return CheckDocbase.read_query(session, query)
 
 
     @staticmethod
-    def prettyInterval(delta):
+    def pretty_interval(delta):
         if delta >= 0:
             secs = (delta) % 60
             mins = (int((delta) / 60)) % 60
@@ -481,7 +485,7 @@ class CheckDocbase(nagiosplugin.Resource):
         return "future"
 
     @staticmethod
-    def isEmpty(value):
+    def is_empty(value):
         if value is None:
             return True
         if isinstance(value, str):
@@ -517,24 +521,24 @@ class CheckSummary(nagiosplugin.Summary):
     def format(self, results):
         message = ""
         for state in [Ok, Unknown, Warn, Critical]:
-            hint = ", ".join(str(x) for x in results if x.state == state and not CheckDocbase.isEmpty(x.hint))
-            message = ", ".join(x for x in [hint, message] if not (CheckDocbase.isEmpty(x)))
+            hint = ", ".join(str(x) for x in results if x.state == state and not CheckDocbase.is_empty(x.hint))
+            message = ", ".join(x for x in [hint, message] if not (CheckDocbase.is_empty(x)))
         return message
 
 
 modes = {
-    'sessioncount': [CheckDocbase.checkSessions, True, "checks active session count"],
-    'targets': [CheckDocbase.checkTargets, False, "checks whether server is registered on projection targets"],
-    'indexagents': [CheckDocbase.checkIndexAgents, False, "checks index agent status"],
-    'checkjobs': [CheckDocbase.checkJobs, False, "checks jobs scheduling"],
-    'timeskew': [CheckDocbase.checkTimeSkew, True, "checks time skew between nagios host and documentum"],
-    'query': [CheckDocbase.checkQuery, True, "checks results returned by query"],
-    'countquery': [CheckDocbase.checkCountQuery, True, "checks results returned by query"],
-    'workqueue': [CheckDocbase.checkWorkQueue, True, "checks workqueue size"],
-    'serverworkqueue': [CheckDocbase.checkServerWorkQueue, True, "checks server workqueue size"],
-    'indexqueue': [CheckDocbase.checkFulltextQueue, True, "checks index agent queue size"],
-    'failedtasks': [CheckDocbase.checkFailedTasks, True, "checks failed tasks"],
-    'login': [CheckDocbase.checkLogin, False, "checks login"],
+    'sessioncount': [CheckDocbase.check_sessions, True, "checks active session count"],
+    'targets': [CheckDocbase.check_targets, False, "checks whether server is registered on projection targets"],
+    'indexagents': [CheckDocbase.check_index_agents, False, "checks index agent status"],
+    'check_jobs': [CheckDocbase.check_jobs, False, "checks jobs scheduling"],
+    'timeskew': [CheckDocbase.check_time_skew, True, "checks time skew between nagios host and documentum"],
+    'query': [CheckDocbase.check_query, True, "checks results returned by query"],
+    'countquery': [CheckDocbase.check_count_query, True, "checks results returned by query"],
+    'workqueue': [CheckDocbase.check_work_queue, True, "checks workqueue size"],
+    'serverworkqueue': [CheckDocbase.check_server_work_queue, True, "checks server workqueue size"],
+    'indexqueue': [CheckDocbase.check_fulltext_queue, True, "checks index agent queue size"],
+    'failedtasks': [CheckDocbase.check_failed_tasks, True, "checks failed tasks"],
+    'login': [CheckDocbase.check_login, False, "checks login"],
 }
 
 

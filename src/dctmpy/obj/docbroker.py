@@ -14,44 +14,44 @@ class DocbrokerObject(TypedObject):
             **{'serializationversion': 0}
         ))
 
-    def readType(self):
+    def __read_type__(self):
         pass
 
-    def readObject(self):
-        header = self.nextToken()
+    def __read_object__(self):
+        header = self.__next_token__()
         if "OBJ" != header:
             raise ParserException("Invalid header, expected OBJ, got: %s" % header)
 
-        typename = self.nextToken()
-        if isEmpty(typename):
+        type_name = self.__next_token__()
+        if isempty(type_name):
             raise ParserException("Wrong type name")
 
-        self.readInt()
+        self.__read_int__()
 
-        for i in xrange(0, self.readInt()):
-            self.readAttr(i)
+        for i in xrange(0, self.__read_int__()):
+            self.__read_attr__(i)
 
-    def readAttr(self, index):
-        attrName = self.nextString(ATTRIBUTE_PATTERN)
-        attrType = self.nextString(ATTRIBUTE_PATTERN)
-        repeating = self.nextString(REPEATING_PATTERN) == REPEATING
-        attrLength = self.readInt()
+    def __read_attr__(self, index):
+        attr_name = self.__next_string__(ATTRIBUTE_PATTERN)
+        attr_type = self.__next_string__(ATTRIBUTE_PATTERN)
+        repeating = self.__next_string__(REPEATING_PATTERN) == REPEATING
+        attr_length = self.__read_int__()
 
-        if attrType is None:
+        if attr_type is None:
             raise ParserException("Unknown type")
 
         result = []
 
         if not repeating:
-            result.append(self.readAttrValue(attrType))
+            result.append(self.__read_attr_value__(attr_type))
         else:
-            for i in xrange(0, self.readInt()):
-                result.append(self.readAttrValue(attrType))
+            for i in xrange(0, self.__read_int__()):
+                result.append(self.__read_attr_value__(attr_type))
 
         self.add(AttrValue(**{
-            'name': attrName,
-            'type': attrType,
-            'length': attrLength,
+            'name': attr_name,
+            'type': attr_type,
+            'length': attr_length,
             'values': result,
             'repeating': repeating,
         }))
@@ -61,7 +61,7 @@ class DocbaseMap(DocbrokerObject):
     def __init__(self, **kwargs):
         super(DocbaseMap, self).__init__(**kwargs)
 
-    def add(self, attrValue):
-        if not attrValue.name in ['i_host_addr']:
-            attrValue.repeating = True
-        super(DocbrokerObject, self).add(attrValue)
+    def add(self, value):
+        if not value.name in ['i_host_addr']:
+            value.repeating = True
+        super(DocbrokerObject, self).add(value)

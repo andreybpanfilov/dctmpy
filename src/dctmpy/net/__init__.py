@@ -3,7 +3,6 @@
 #  See main module for license.
 #
 
-import array
 from dctmpy import *
 from dctmpy.obj.typedobject import TypedObject
 
@@ -17,7 +16,7 @@ LONG_LENGTH_START = 0x82
 STRING_ARRAY_START = 0x36
 
 
-def serializeInteger(value):
+def serialize_integer(value):
     if value is None:
         raise RuntimeError("Undefined integer value")
     result = array.array('B')
@@ -30,7 +29,7 @@ def serializeInteger(value):
     return result
 
 
-def serializeLength(value):
+def serialize_length(value):
     if value is None:
         raise RuntimeError("Undefined integer value")
     result = array.array('B')
@@ -43,30 +42,30 @@ def serializeLength(value):
     return result
 
 
-def serializeString(value):
+def serialize_string(value):
     result = array.array('B')
     if value is None or len(value) == 0:
         result.append(EMPTY_STRING_START)
         result.append(NULL_BYTE)
         return result
-    result.extend(stringToIntegerArray(value))
+    result.extend(string_to_integer_array(value))
     result.append(NULL_BYTE)
-    for b in serializeLength(len(result))[::-1]:
+    for b in serialize_length(len(result))[::-1]:
         result.insert(0, b)
     result.insert(0, STRING_START)
     return result
 
 
-def serializeId(value):
+def serialize_id(value):
     if value is None or len(value) == 0:
         value = NULL_ID
-    return serializeString(value)
+    return serialize_string(value)
 
 
-def serializeIntegerArray(intarray):
+def serialize_integer_array(intarray):
     result = []
     for i in intarray:
-        result.extend(serializeInteger(i))
+        result.extend(serialize_integer(i))
     result.insert(0, len(result) & 0x000000ff)
     result.insert(0, (len(result) - 1) >> 8)
     result.insert(0, LONG_LENGTH_START)
@@ -74,33 +73,33 @@ def serializeIntegerArray(intarray):
     return result
 
 
-def serializeValue(value):
+def serialize_value(value):
     if value is None:
-        return serializeString("")
+        return serialize_string("")
     elif isinstance(value, str):
-        return serializeString(value)
+        return serialize_string(value)
     elif isinstance(value, int):
-        return serializeInteger(value)
+        return serialize_integer(value)
     elif isinstance(value, list):
-        return serializeIntegerArray(value)
+        return serialize_integer_array(value)
     elif isinstance(value, TypedObject):
-        return serializeString(value.serialize())
+        return serialize_string(value.serialize())
     elif hasattr(value.__class__, "serialize"):
-        return serializeString(value.serialize())
+        return serialize_string(value.serialize())
     else:
         raise TypeError("Invalid argument type")
 
 
-def serializeData(data=None):
+def serialize_data(data=None):
     result = array.array('B')
     if data is None:
         return result
     for i in data:
-        result.extend(serializeValue(i))
+        result.extend(serialize_value(i))
     return result
 
 
-def readInteger(data):
+def read_integer(data):
     if len(data) < 3:
         raise RuntimeError("Wrong sequence, at least 3 bytes required, got: %d" % len(data))
 
@@ -121,7 +120,7 @@ def readInteger(data):
     return value
 
 
-def readLength(data):
+def read_length(data):
     if len(data) < 1:
         raise RuntimeError("Wrong sequence, at least 1 byte required, got: %d" % len(data))
 
@@ -143,25 +142,25 @@ def readLength(data):
     return value
 
 
-def readIntegerArray(data):
+def read_integer_array(data):
     header = data.pop(0)
     if header != INT_ARRAY_START:
         raise RuntimeError("Wrong sequence for integer array: 0x%X" % header)
 
-    length = readLength(data)
+    length = read_length(data)
     stop = len(data) - length
     result = []
     while len(data) > stop:
-        result.append(readInteger(data))
+        result.append(read_integer(data))
     return result
 
 
-def readArray(data, asstring=False):
+def read_array(data, asstring=False):
     sequence = data.pop(0)
     if sequence == EMPTY_STRING_START and data.pop(0) == NULL_BYTE:
         return []
     elif sequence == STRING_START:
-        length = readLength(data)
+        length = read_length(data)
         result = []
         for i in xrange(0, length):
             result.append(data.pop(0))
@@ -171,20 +170,20 @@ def readArray(data, asstring=False):
     elif sequence == STRING_ARRAY_START and data.pop(0) == 0x80:
         result = []
         while data[0] != NULL_BYTE or data[1] != NULL_BYTE:
-            result.append(readArray(data, asstring))
+            result.append(read_array(data, asstring))
         data.pop(0)
         data.pop(0)
         return result
     raise RuntimeError("Unknown sequence: 0x%X" % sequence)
 
 
-def readString(data):
-    return integerArrayToString(readArray(data, True))
+def read_string(data):
+    return integer_array_to_string(read_array(data, True))
 
 
-def readStrings(data):
+def read_strings(data):
     result = []
-    for res in readArray(data):
-        result.append(integerArrayToString(res))
+    for res in read_array(data):
+        result.append(integer_array_to_string(res))
     return result
 

@@ -3,16 +3,17 @@
 #  See main module for license.
 #
 
+import socket
+
 from dctmpy import *
 from dctmpy.net.request import Request
-import socket
 
 
 class Netwise(object):
-    fields = ['version', 'release', 'inumber', 'sequence', 'sockopts']
+    attributes = ['version', 'release', 'inumber', 'sequence', 'sockopts']
 
     def __init__(self, **kwargs):
-        for attribute in Netwise.fields:
+        for attribute in Netwise.attributes:
             self.__setattr__(ATTRIBUTE_PREFIX + attribute, kwargs.pop(attribute, None))
         if self.sockopts is None:
             self.sockopts = kwargs
@@ -20,13 +21,13 @@ class Netwise(object):
             self.sequence = 0
         self.__socket = None
 
-    def connected(self):
+    def __connected__(self):
         if self.__socket is None:
             return False
         return True
 
-    def socket(self):
-        if not self.connected():
+    def __socket__(self):
+        if not self.__connected__():
             try:
                 host = self.sockopts.get('host', None)
                 port = self.sockopts.get('port', None)
@@ -41,7 +42,7 @@ class Netwise(object):
 
     def disconnect(self):
         try:
-            if self.connected():
+            if self.__connected__():
                 self.__socket.close()
         finally:
             self.__socket = None
@@ -51,7 +52,7 @@ class Netwise(object):
 
     def request(self, **kwargs):
         return Request(**dict(kwargs, **{
-            'socket': self.socket(),
+            'socket': self.__socket__(),
             'sequence': ++self.sequence,
             'version': self.version,
             'release': self.release,
@@ -59,13 +60,13 @@ class Netwise(object):
         }))
 
     def __getattr__(self, name):
-        if name in Netwise.fields:
+        if name in Netwise.attributes:
             return self.__getattribute__(ATTRIBUTE_PREFIX + name)
         else:
-            raise AttributeError
+            raise AttributeError("Unknown attribute %s in %s" % (name, str(self.__class__)))
 
     def __setattr__(self, name, value):
-        if name in Netwise.fields:
+        if name in Netwise.attributes:
             Netwise.__setattr__(self, ATTRIBUTE_PREFIX + name, value)
         else:
             super(Netwise, self).__setattr__(name, value)
