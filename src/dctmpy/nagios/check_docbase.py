@@ -191,7 +191,7 @@ class CheckDocbase(Resource):
             if isinstance(self.jobs, list):
                 jobs_to_check = list(self.jobs)
             elif isinstance(self.jobs, str):
-                jobs_to_check = re.split(",\s*", self.jobs)
+                jobs_to_check = re.split(',\s*', self.jobs)
             else:
                 raise RuntimeError("Wrong jobs argument")
 

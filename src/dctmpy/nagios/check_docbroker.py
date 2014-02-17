@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
+import re
 
 from nagiosplugin import Summary, Check, Resource, guarded, Result, Metric
 from nagiosplugin.state import Critical, Warn, Ok, Unknown
@@ -32,7 +33,7 @@ class CheckDocbroker(Resource):
                 self.add_result(Ok, message)
                 return
 
-            for docbase in self.docbase.split(',\s*'):
+            for docbase in re.split(',\s*', self.docbase):
                 server = None
 
                 if '.' in docbase:
