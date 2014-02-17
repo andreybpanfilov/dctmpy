@@ -2,12 +2,15 @@
 import argparse
 import re
 
-import nagiosplugin
+from nagiosplugin import Metric, Result, Summary, Check, Resource, guarded, ScalarContext
 from nagiosplugin.state import Critical, Warn, Ok, Unknown
 
 from dctmpy.docbaseclient import DocbaseClient
 from dctmpy.docbrokerclient import DocbrokerClient
 
+
+THRESHOLDS = 'thresholds'
+NULL_CONTEXT = 'null'
 
 JOB_ATTRIBUTES = ['object_name', 'is_inactive', 'a_last_invocation',
                   'a_last_completion', 'a_last_return_code', 'a_current_status',
@@ -30,14 +33,14 @@ JOB_INTERVALS = {
 }
 
 
-class CheckDocbase(nagiosplugin.Resource):
+class CheckDocbase(Resource):
     def __init__(self, args, results):
         self.args = args
         self.results = results
         self.session = None
 
     def probe(self):
-        yield nagiosplugin.Metric("null", 0, context='null')
+        yield Metric(NULL_CONTEXT, 0, context=NULL_CONTEXT)
         try:
             self.check_login()
             if not self.session:
@@ -63,9 +66,9 @@ class CheckDocbase(nagiosplugin.Resource):
         except Exception, e:
             self.add_result(Critical, "Unable to retrieve session count: " + str(e))
             return
-        yield nagiosplugin.Metric('sessioncount', int(count['hot_list_size']), min=0,
-                                  max=int(count['concurrent_sessions']),
-                                  context='sessioncount')
+        yield Metric('sessioncount', int(count['hot_list_size']), min=0,
+                     max=int(count['concurrent_sessions']),
+                     context=THRESHOLDS)
 
     def check_targets(self):
         targets = []
@@ -317,7 +320,7 @@ class CheckDocbase(nagiosplugin.Resource):
                 "AND a_wq_name is NULLSTRING"
         try:
             result = CheckDocbase.read_object(self.session, query)
-            yield nagiosplugin.Metric('workqueue', int(result['work_queue_size']), min=0, context='workqueue')
+            yield Metric('workqueue', int(result['work_queue_size']), min=0, context=THRESHOLDS)
         except Exception, e:
             message = "Unable to execute query: %s" % str(e)
             self.add_result(Critical, message)
@@ -331,8 +334,7 @@ class CheckDocbase(nagiosplugin.Resource):
                 "AND a_wq_name ='" + server_id + "'"
         try:
             result = CheckDocbase.read_object(self.session, query)
-            yield nagiosplugin.Metric(server_name[-20:], int(result['work_queue_size']), min=0,
-                                      context='serverworkqueue')
+            yield Metric(server_name[-20:], int(result['work_queue_size']), min=0, context=THRESHOLDS)
         except Exception, e:
             message = "Unable to execute query: %s" % str(e)
             self.add_result(Critical, message)
@@ -356,8 +358,7 @@ class CheckDocbase(nagiosplugin.Resource):
                 + username + "'AND task_state not in ('failed','warning')"
         try:
             result = CheckDocbase.read_object(self.session, query)
-            yield nagiosplugin.Metric(username[-20:], int(result['queue_size']), min=0,
-                                      context='indexqueue')
+            yield Metric(username[-20:], int(result['queue_size']), min=0, context=THRESHOLDS)
         except Exception, e:
             message = "Unable to execute query: %s" % str(e)
             self.add_result(Critical, message)
@@ -378,6 +379,25 @@ class CheckDocbase(nagiosplugin.Resource):
         except Exception, e:
             message = "Unable to execute query: %s" % str(e)
             self.add_result(Critical, message)
+
+    def check_jms_status(self):
+        try:
+            config = self.session.dump_jms_config_list()
+            for i in xrange(0, len(config['jms_config_id'])):
+                if config['is_disabled_in_docbase'][i]:
+                    message = "%s is disabled" % config['jms_config_name'][i]
+                    self.add_result(Warn, message)
+                    continue
+                if config['is_marked_dead_in_cache'][i]:
+                    message = "%s is marked as dead" % config['jms_config_name'][i]
+                    self.add_result(Critical, message)
+                else:
+                    message = "%s - OK" % config['jms_config_name'][i]
+                    self.add_result(Ok, message)
+        except Exception, e:
+            message = "Unable to retrieve jms configs: %s" % str(e)
+            self.add_result(Critical, message)
+            return
 
     def check_login(self):
         try:
@@ -405,7 +425,7 @@ class CheckDocbase(nagiosplugin.Resource):
             self.add_result(status, message)
 
     def add_result(self, state, message):
-        self.results.add(nagiosplugin.Result(state, message))
+        self.results.add(Result(state, message))
 
     def __getattr__(self, name):
         if hasattr(self.args, name):
@@ -508,7 +528,7 @@ class CheckDocbase(nagiosplugin.Resource):
         return False
 
 
-class CheckSummary(nagiosplugin.Summary):
+class CheckSummary(Summary):
     def verbose(self, results):
         return ''
 
@@ -530,7 +550,7 @@ modes = {
     'sessioncount': [CheckDocbase.check_sessions, True, "checks active session count"],
     'targets': [CheckDocbase.check_targets, False, "checks whether server is registered on projection targets"],
     'indexagents': [CheckDocbase.check_index_agents, False, "checks index agent status"],
-    'check_jobs': [CheckDocbase.check_jobs, False, "checks jobs scheduling"],
+    'jobs': [CheckDocbase.check_jobs, False, "checks jobs scheduling"],
     'timeskew': [CheckDocbase.check_time_skew, True, "checks time skew between nagios host and documentum"],
     'query': [CheckDocbase.check_query, True, "checks results returned by query"],
     'countquery': [CheckDocbase.check_count_query, True, "checks results returned by query"],
@@ -539,10 +559,11 @@ modes = {
     'indexqueue': [CheckDocbase.check_fulltext_queue, True, "checks index agent queue size"],
     'failedtasks': [CheckDocbase.check_failed_tasks, True, "checks failed tasks"],
     'login': [CheckDocbase.check_login, False, "checks login"],
+    'jmsstatus': [CheckDocbase.check_jms_status, False, "checks jms status"],
 }
 
 
-@nagiosplugin.guarded
+@guarded
 def main():
     argp = argparse.ArgumentParser(description=__doc__)
     argp.add_argument('-H', '--host', required=True, metavar='hostname', help='server hostname')
@@ -550,26 +571,22 @@ def main():
     argp.add_argument('-i', '--docbaseid', required=True, metavar='docbaseid', type=int, help='docbase identifier')
     argp.add_argument('-l', '--login', metavar='username', help='username')
     argp.add_argument('-a', '--authentication', metavar='password', help='password')
-    argp.add_argument('-t', '--timeout', metavar='timeout', default=60, type=int, help='check timeout')
+    argp.add_argument('-t', '--timeout', metavar='timeout', default=60, type=int,
+                      help='check timeout, default is 60 seconds')
     argp.add_argument('-m', '--mode', required=True, metavar='mode',
-                      help="check to use, any of: " + "; ".join(x + " - " + modes[x][2] for x in modes.keys()))
-    argp.add_argument('-j', '--jobs', metavar='jobs', default='', help='jobs to check')
-    for mode in modes.keys():
-        if not modes[mode][1]:
-            continue
-        argp.add_argument("--" + mode + "-warning", metavar='RANGE',
-                          help='<warning range for ' + mode + ' check>')
-        argp.add_argument("--" + mode + "-critical", metavar='RANGE',
-                          help='<critical range for ' + mode + ' check>')
+                      help="mode to use, one of: " + ", ".join(x for x in modes.keys()))
+    argp.add_argument('-j', '--jobs', metavar='jobs', default='', help='jobs to check, comma-separated list')
+    argp.add_argument('-n', '--name', metavar='name', default='', help='name of check that appears in output')
+    argp.add_argument('-w', '--warning', metavar='RANGE', help='warning threshold')
+    argp.add_argument('-c', '--critical', metavar='RANGE', help='critical threshold')
     args = argp.parse_args()
-    check = nagiosplugin.Check(CheckSummary())
-    check.name = args.mode
+    check = Check(CheckSummary())
+    if getattr(args, 'name', None):
+        check.name = args.name
+    else:
+        check.name = args.mode
     check.add(CheckDocbase(args, check.results))
-    for mode in modes.keys():
-        if not modes[mode][1]:
-            continue
-        check.add(
-            nagiosplugin.ScalarContext(mode, getattr(args, mode + "_warning"), getattr(args, mode + "_critical")))
+    check.add(ScalarContext(THRESHOLDS, getattr(args, "warning"), getattr(args, "critical")))
     check.main(timeout=args.timeout)
 
 

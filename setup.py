@@ -9,5 +9,6 @@ setup(
     license='',
     author='Andrey B. Panfilov',
     author_email='andrew@panfilov.tel',
-    description='Python bindings for Documentum'
+    description='Python bindings for Documentum', requires=['nagiosplugin']
+
 )

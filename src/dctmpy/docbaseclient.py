@@ -382,20 +382,19 @@ class DocbaseClient(Netwise):
 
     def _register_known_commands(self):
         cls = self.__class__
-        self._register(RpcCommand('GET_SERVER_CONFIG', cls._as_object, TypedObject, cls._server_config_request, False))
-        self._register(
-            RpcCommand('GET_DOCBASE_CONFIG', cls._as_object, TypedObject, cls._docbase_config_request, False))
-        self._register(RpcCommand('ENTRY_POINTS', cls._as_object, EntryPoints, cls._entry_points_request, False))
-        self._register(RpcCommand('FETCH', cls._as_object, Persistent, None, True))
-        self._register(RpcCommand('AUTHENTICATE_USER', cls._as_object, TypedObject, cls._auth_request, False))
-        self._register(RpcCommand('GET_ERRORS', cls._as_collection, Collection, cls._get_errors_request, False))
-        self._register(RpcCommand('FETCH_TYPE', cls._as_object, TypedObject, cls._fetch_type_request, False))
-        self._register(RpcCommand('EXEC', cls._as_collection, Collection, cls._query_request, False))
-        self._register(RpcCommand('TIME', cls._as_time, TypedObject, None, False))
-        self._register(RpcCommand('COUNT_SESSIONS', cls._as_object, TypedObject, None, False))
-        self._register(RpcCommand('EXEC_SELECT_SQL', cls._as_collection, Collection, cls._sql_query_request, False))
-        self._register(
-            RpcCommand('FTINDEX_AGENT_ADMIN', cls._as_object, TypedObject, cls._index_agent_status_request, False))
+        self._register(Rpc('GET_SERVER_CONFIG', cls._as_object, TypedObject, cls._server_config_request, False))
+        self._register(Rpc('GET_DOCBASE_CONFIG', cls._as_object, TypedObject, cls._docbase_config_request, False))
+        self._register(Rpc('ENTRY_POINTS', cls._as_object, EntryPoints, cls._entry_points_request, False))
+        self._register(Rpc('FETCH', cls._as_object, Persistent, None, True))
+        self._register(Rpc('AUTHENTICATE_USER', cls._as_object, TypedObject, cls._auth_request, False))
+        self._register(Rpc('GET_ERRORS', cls._as_collection, Collection, cls._get_errors_request, False))
+        self._register(Rpc('FETCH_TYPE', cls._as_object, TypedObject, cls._fetch_type_request, False))
+        self._register(Rpc('EXEC', cls._as_collection, Collection, cls._query_request, False))
+        self._register(Rpc('TIME', cls._as_time, TypedObject, None, False))
+        self._register(Rpc('COUNT_SESSIONS', cls._as_object, TypedObject, None, False))
+        self._register(Rpc('EXEC_SELECT_SQL', cls._as_collection, Collection, cls._sql_query_request, False))
+        self._register(Rpc('FTINDEX_AGENT_ADMIN', cls._as_object, TypedObject, cls._index_agent_status_request, False))
+        self._register(Rpc('DUMP_JMS_CONFIG_LIST', cls._as_object, TypedObject, None, False))
 
     def _register(self, command):
         if not self.knowncommands:
@@ -524,7 +523,7 @@ class Response(object):
             super(Response, self).__setattr__(name, value)
 
 
-class RpcCommand(object):
+class Rpc(object):
     attributes = ['command', 'method', 'returntype', 'request', 'needid', 'argcnt']
 
     def __init__(self, command, method, returntype, request, needid):
@@ -539,15 +538,15 @@ class RpcCommand(object):
             self.argcnt = 0
 
     def __getattr__(self, name):
-        if name in RpcCommand.attributes:
+        if name in Rpc.attributes:
             return self.__getattribute__(ATTRIBUTE_PREFIX + name)
         else:
             return AttributeError("Unknown attribute %s in %s" % (name, str(self.__class__)))
 
     def __setattr__(self, name, value):
-        if name in RpcCommand.attributes:
-            RpcCommand.__setattr__(self, ATTRIBUTE_PREFIX + name, value)
+        if name in Rpc.attributes:
+            Rpc.__setattr__(self, ATTRIBUTE_PREFIX + name, value)
         else:
-            super(RpcCommand, self).__setattr__(name, value)
+            super(Rpc, self).__setattr__(name, value)
 
 
