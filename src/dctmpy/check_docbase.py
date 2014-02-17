@@ -566,7 +566,7 @@ class CheckSummary(Summary):
     def format(self, results):
         message = ""
         for state in [Ok, Unknown, Warn, Critical]:
-            hint = ", ".join(str(x) for x in results if x.state == state and not CheckDocbase.is_empty(x.hint))
+            hint = ", ".join(str(x) for x in results if x.state == state and not CheckDocbase.is_empty(str(x)))
             message = ", ".join(x for x in [hint, message] if not (CheckDocbase.is_empty(x)))
         return message
 
@@ -592,8 +592,8 @@ modes = {
 def main():
     argp = argparse.ArgumentParser(description=__doc__)
     argp.add_argument('-H', '--host', required=True, metavar='hostname', help='server hostname')
-    argp.add_argument('-p', '--port', required=True, metavar='port', type=int, help='server port')
-    argp.add_argument('-i', '--docbaseid', required=True, metavar='docbaseid', type=int, help='docbase identifier')
+    argp.add_argument('-p', '--port', required=False, metavar='port', type=int, help='server port')
+    argp.add_argument('-i', '--docbaseid', required=False, metavar='docbaseid', type=int, help='docbase identifier')
     argp.add_argument('-l', '--login', metavar='username', help='username')
     argp.add_argument('-a', '--authentication', metavar='password', help='password')
     argp.add_argument('-t', '--timeout', metavar='timeout', default=60, type=int,
@@ -607,8 +607,28 @@ def main():
     argp.add_argument('-w', '--warning', metavar='RANGE', help='warning threshold')
     argp.add_argument('-c', '--critical', metavar='RANGE', help='critical threshold')
     args = argp.parse_args()
+
+    m = re.match('^(dctm://((.*?)(:(.*))?@)?)?([^/:]+?)(:(\d+))?(/(\d+))?$', args.host)
+    if m:
+        if m.group(3):
+            setattr(args, 'login', m.group(3))
+        if m.group(5):
+            setattr(args, 'authentication', m.group(5))
+        if m.group(6):
+            setattr(args, 'host', m.group(6))
+        if m.group(8) is not None:
+            setattr(args, 'port', int(m.group(8)))
+        if m.group(10) is not None:
+            setattr(args, 'docbaseid', int(m.group(10)))
+    else:
+        if args.login and not args.authentication:
+            m = re.match('^(.*?):(.*)$', args.login)
+            if m:
+                setattr(args, 'login', m.group(1))
+                setattr(args, 'authentication', m.group(2))
+
     check = Check(CheckSummary())
-    if getattr(args, 'name', None):
+    if args.name:
         check.name = args.name
     else:
         check.name = args.mode
