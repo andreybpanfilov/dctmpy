@@ -315,7 +315,20 @@ class CheckDocbase(Resource):
             return
 
     def check_query(self):
-        ''
+        try:
+            count = 0
+            message = ""
+            for rec in CheckDocbase.read_query(self.session, self.query):
+                count += 1
+                if count > 1:
+                    message += ", "
+                message += self.format.format(**rec)
+
+            if count > 0:
+                self.add_result(Critical, message)
+        except Exception, e:
+            message = "Unable to execute query: %s" % str(e)
+            self.add_result(Critical, message)
 
     def check_count_query(self):
         try:
@@ -590,6 +603,7 @@ def main():
     argp.add_argument('-j', '--jobs', metavar='jobs', default='', help='jobs to check, comma-separated list')
     argp.add_argument('-n', '--name', metavar='name', default='', help='name of check that appears in output')
     argp.add_argument('-q', '--query', metavar='query', default='', help='query to run')
+    argp.add_argument('-f', '--format', metavar='format', default='', help='query output format')
     argp.add_argument('-w', '--warning', metavar='RANGE', help='warning threshold')
     argp.add_argument('-c', '--critical', metavar='RANGE', help='critical threshold')
     args = argp.parse_args()
