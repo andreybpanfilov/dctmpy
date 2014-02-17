@@ -1,4 +1,5 @@
-#!python
+#!/usr/bin/env python
+
 import argparse
 
 from nagiosplugin import Summary, Check, Resource, guarded, Result, Metric
