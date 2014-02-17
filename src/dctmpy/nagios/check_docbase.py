@@ -371,7 +371,7 @@ class CheckDocbase(Resource):
             for user in CheckDocbase.read_query(self.session,
                                                 "select distinct queue_user from dm_ftindex_agent_config"):
                 count += 1
-                self.check_fulltext_queue(user['queue_user'])
+                self.check_fulltext_queue_for_user(user['queue_user'])
             if count == 0:
                 message = "No indexagents"
                 self.add_result(Warn, message)
@@ -379,7 +379,7 @@ class CheckDocbase(Resource):
             message = "Unable to execute query: %s" % str(e)
             self.add_result(Critical, message)
 
-    def check_fulltext_queue(self, username):
+    def check_fulltext_queue_for_user(self, username):
         query = "SELECT count(r_object_id) AS queue_size FROM dmi_queue_item WHERE name='" \
                 + username + "'AND task_state not in ('failed','warning')"
         try:
@@ -582,7 +582,7 @@ modes = {
     'countquery': [CheckDocbase.check_count_query, True, "checks results returned by query"],
     'workqueue': [CheckDocbase.check_work_queue, True, "checks workqueue size"],
     'serverworkqueue': [CheckDocbase.check_server_work_queue, True, "checks server workqueue size"],
-    'indexqueue': [CheckDocbase.check_fulltext_queue, True, "checks index agent queue size"],
+    'indexqueue': [CheckDocbase.check_fulltext_queue_for_user, True, "checks index agent queue size"],
     'failedtasks': [CheckDocbase.check_failed_tasks, True, "checks failed tasks"],
     'login': [CheckDocbase.check_login, False, "checks login"],
     'jmsstatus': [CheckDocbase.check_jms_status, False, "checks jms status"],
