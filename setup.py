@@ -33,4 +33,9 @@ setup(
     ],
     zip_safe=False,
     extras_require=extras_require,
+    entry_points={
+        'console_scripts':
+            ['check_docbase = dctmpy.nagios.check_docbase [nagios]',
+             'check_docbroker = dctmpy.nagios.check_docbroker [nagios]']
+    }
 )
