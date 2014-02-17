@@ -138,7 +138,7 @@ class CheckDocbase(nagiosplugin.Resource):
                 docbaseame, servername, status, docbrokerhost, docbrokerport, str(e))
             self.add_result(Critical, message)
             return
-        if session is not None:
+        if session:
             try:
                 session.disconnect()
             except Exception, e:
@@ -199,7 +199,7 @@ class CheckDocbase(nagiosplugin.Resource):
 
         try:
             for job in CheckDocbase.get_jobs(self.session, jobs_to_check):
-                if jobs_to_check is not None and job['object_name'] in jobs_to_check:
+                if jobs_to_check and job['object_name'] in jobs_to_check:
                     jobs_to_check.remove(job['object_name'])
                 self.check_job(job, now)
         except Exception, e:
@@ -214,15 +214,15 @@ class CheckDocbase(nagiosplugin.Resource):
             self.add_result(Critical, message)
 
     def check_job(self, job, now):
-        if job['start_date'] is None or job['start_date'] <= 0:
+        if not job['start_date'] > -1:
             message = "%s has undefined start_date" % job['object_name']
             self.add_result(Critical, message)
             return
-        if job['a_next_invocation'] is None or job['a_next_invocation'] <= 0:
+        if not job['a_next_invocation'] > -1:
             message = "%s has undefined next_invocation_date" % job['object_name']
             self.add_result(Critical, message)
             return
-        if job['expiration_date'] is not None and job['expiration_date'] < job['start_date']:
+        if -1 < job['expiration_date'] < job['start_date']:
             message = "%s has expiration_date less then start_date" % job['object_name']
             self.add_result(Critical, message)
             return
@@ -260,7 +260,7 @@ class CheckDocbase(nagiosplugin.Resource):
             message = "%s is inactive" % job['object_name']
             self.add_result(Critical, message)
             return
-        if job['expiration_date'] is not None and now > job['expiration_date']:
+        if now > job['expiration_date'] > -1:
             message = "%s is expired" % job['object_name']
             self.add_result(Critical, message)
             return
@@ -268,7 +268,7 @@ class CheckDocbase(nagiosplugin.Resource):
             message = "%s max iterations exceeded" % job['object_name']
             self.add_result(Critical, message)
             return
-        if job['a_last_invocation'] is None:
+        if not job['a_last_invocation'] > -1:
             message = "%s has been never executed" % job['object_name']
             self.add_result(Warn, message)
             return
@@ -276,8 +276,8 @@ class CheckDocbase(nagiosplugin.Resource):
             message = "%s has status: %s" % ((job['object_name']), (job['a_current_status']))
             self.add_result(Critical, message)
             return
-        if re.search('agentexec', job['a_special_app']) is not None or (
-                    job['a_last_invocation'] is not None and job['a_last_completion'] is None):
+        if re.match('agentexec', job['a_special_app']) or (
+                    job['a_last_invocation'] > -1 and not job['a_last_completion']):
             message = "%s is running for %s" % (
                 (job['object_name']), CheckDocbase.pretty_interval(now - job['a_last_invocation']))
             self.add_result(Ok, message)
@@ -433,7 +433,7 @@ class CheckDocbase(nagiosplugin.Resource):
                 if 0 < cnt == read:
                     break
         finally:
-            if col is not None:
+            if col:
                 col.close()
 
     @staticmethod
@@ -446,7 +446,7 @@ class CheckDocbase(nagiosplugin.Resource):
     @staticmethod
     def get_jobs(session, jobs=None, condition=""):
         query = JOB_QUERY + condition
-        if jobs is not None:
+        if jobs:
             query += " AND object_name IN ('" + "','".join(jobs) + "')"
         return CheckDocbase.read_query(session, query)
 
@@ -465,7 +465,7 @@ class CheckDocbase(nagiosplugin.Resource):
                 " AND wi.r_workflow_id = pkg.r_workflow_id" \
                 " AND wi.r_act_seqno = pkg.r_act_seqno" \
                 " AND que.delete_flag = 0"
-        if offset is not None:
+        if offset >= 0:
             query += " que.date_sent > date(now) - %d " % offset
         return CheckDocbase.read_query(session, query)
 

@@ -44,7 +44,7 @@ def serialize_length(value):
 
 def serialize_string(value):
     result = array.array('B')
-    if value is None or len(value) == 0:
+    if not value:
         result.append(EMPTY_STRING_START)
         result.append(NULL_BYTE)
         return result
@@ -57,7 +57,7 @@ def serialize_string(value):
 
 
 def serialize_id(value):
-    if value is None or len(value) == 0:
+    if not value:
         value = NULL_ID
     return serialize_string(value)
 

@@ -23,7 +23,7 @@ class EntryPoints(TypedObject):
         return self.__methods
 
     def __getattr__(self, name):
-        if self.__methods is not None:
+        if self.__methods:
             return self.__methods[name]
         else:
             return super(EntryPoints, self).__getattr__(name)

@@ -227,15 +227,15 @@ ISO8601_REGEXP = "^([0-9]){4}(-([0-9]){2}){2}T([0-9]{2}:){2}([0-9]){2}Z"
 
 def get_platform_id():
     (system, release, version) = platform.system_alias(platform.system(), platform.release(), platform.version())
-    if re.match("windows", system, re.I) is not None or re.match("windows", release, re.I) is not None:
+    if re.match("windows", system, re.I) or re.match("windows", release, re.I):
         return PLATFORMS['MS_WINDOWS']
-    elif re.match("solaris", system, re.I) is not None or re.match("solaris", release, re.I) is not None:
+    elif re.match("solaris", system, re.I) or re.match("solaris", release, re.I):
         return PLATFORMS['SOLARIS']
-    elif re.match("aix", system, re.I) is not None or re.match("aix", release, re.I) is not None:
+    elif re.match("aix", system, re.I) or re.match("aix", release, re.I):
         return PLATFORMS['AIX']
-    elif re.match("hpux", system, re.I) is not None or re.match("hpux", release, re.I) is not None:
+    elif re.match("hpux", system, re.I) or re.match("hpux", release, re.I):
         return PLATFORMS['HP_UX']
-    elif re.match("linux", system, re.I) is not None or re.match("linux", release, re.I) is not None:
+    elif re.match("linux", system, re.I) or re.match("linux", release, re.I):
         return PLATFORMS['LINUX']
     else:
         return 0
@@ -247,8 +247,8 @@ def get_charset_id():
     data[2] = data[2].replace("_", "-").upper()
     if data[2] in CHARSETS:
         return CHARSETS[data[2]]
-    elif (re.match("windows", system, re.I) is not None
-          or re.match("windows", release, re.I) is not None) and "MS" + data[2] in CHARSETS:
+    elif (re.match("windows", system, re.I)
+          or re.match("windows", release, re.I)) and "MS" + data[2] in CHARSETS:
         return CHARSETS["MS" + data[2]]
     else:
         return 0
@@ -320,7 +320,7 @@ def parse_address(value):
 def parse_time(value):
     if isempty(value) or "nulldate" == value:
         return None
-    if re.match(ISO8601_REGEXP, value) is not None:
+    if re.match(ISO8601_REGEXP, value):
         chunks = re.split("[-:TZ]", value)
         if len(chunks) != 7:
             raise ParserException("Invalid date: %s" % value)
@@ -393,7 +393,7 @@ class TypeCache:
     __instance = None
 
     def __init__(self):
-        if TypeCache.__instance is None:
+        if not TypeCache.__instance:
             TypeCache.__instance = TypeCache.__impl()
         self.__dict__['_TypeCache__instance'] = TypeCache.__instance
 
@@ -526,7 +526,7 @@ class TypeInfo(object):
     def append(self, attrInfo):
         self.__attrs.append(attrInfo)
         if self.serversion > 0:
-            if attrInfo.position is not None:
+            if attrInfo.position > -1:
                 self.__positions[attrInfo.position] = attrInfo
             elif self.name != "GeneratedType":
                 raise RuntimeError("Empty position")
@@ -534,7 +534,7 @@ class TypeInfo(object):
     def insert(self, index, attrInfo):
         self.__attrs.insert(index, attrInfo)
         if self.serversion > 0:
-            if attrInfo.position is not None:
+            if attrInfo.position > -1:
                 self.__positions[attrInfo.position] = attrInfo
             elif self.name != "GeneratedType":
                 raise RuntimeError("Empty position")

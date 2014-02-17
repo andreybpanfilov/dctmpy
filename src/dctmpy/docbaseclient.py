@@ -33,9 +33,9 @@ class DocbaseClient(Netwise):
             self.serversion = 0
         if self.iso8601time is None:
             self.iso8601time = False
-        if self.session is None:
+        if not self.session:
             self.session = NULL_ID
-        if self.docbaseid is None or self.docbaseid == -1:
+        if not self.docbaseid >= 0:
             self._resolve_docbase_id()
         if self.messages is None:
             self.messages = []
@@ -57,7 +57,7 @@ class DocbaseClient(Netwise):
         self._connect()
         self._fetch_entry_points()
 
-        if self.password is not None and self.username is not None:
+        if self.password and self.username:
             self.authenticate()
 
     def _resolve_docbase_id(self):
@@ -76,13 +76,13 @@ class DocbaseClient(Netwise):
 
         reason = response.next()
         m = re.search('Wrong docbase id: \(-1\) expecting: \((\d+)\)', reason)
-        if m is not None:
+        if m:
             self.docbaseid = int(m.group(1))
         self.disconnect()
 
     def disconnect(self):
         try:
-            if self.session is not None and self.session != NULL_ID:
+            if self.session and self.session != NULL_ID:
                 self.request(
                     type=RPC_CLOSE_SESSION,
                     data=[
@@ -136,7 +136,7 @@ class DocbaseClient(Netwise):
     def rpc(self, rpc_id, data=None):
         if not data:
             data = []
-        if self.session is not None:
+        if self.session:
             if len(data) == 0 or data[0] != self.session:
                 data.insert(0, self.session)
 
@@ -190,7 +190,7 @@ class DocbaseClient(Netwise):
         if rpc_id is None:
             rpc_id = RPC_APPLY
 
-        if object_id is None:
+        if not object_id:
             object_id = NULL_ID
 
         response = self.rpc(rpc_id, [self._get_method(method), object_id, request])
@@ -209,7 +209,7 @@ class DocbaseClient(Netwise):
         elif rpc_id == RPC_APPLY_FOR_TIME:
             return data
 
-        if cls is None:
+        if not cls:
             if rpc_id == RPC_APPLY:
                 cls = Collection
             elif rpc_id == RPC_APPLY_FOR_OBJECT:
@@ -238,12 +238,12 @@ class DocbaseClient(Netwise):
         self.messages = [x for x in self.get_errors()]
 
     def authenticate(self, username=None, password=None):
-        if username is not None and password is not None:
+        if username and password:
             self.username = username
             self.password = password
-        if self.username is None:
+        if not self.username:
             raise RuntimeError("Empty username")
-        if self.password is None:
+        if not self.password:
             raise RuntimeError("Empty password")
 
         result = self.authenticate_user(self.username, self._obfuscate(self.password))
@@ -267,13 +267,13 @@ class DocbaseClient(Netwise):
     def get_by_qualification(self, qualification):
         collection = self.query("select r_object_id from %s" % qualification)
         record = collection.next_record()
-        if record is not None:
+        if record:
             return self.fetch(record['r_object_id'])
         return None
 
     def get_type(self, name, vstamp=0):
         type_obj = get_type_from_cache(name)
-        if type_obj is not None:
+        if type_obj:
             return type_obj
         data = None
         if "FETCH_TYPE" in self.entrypoints:
@@ -297,7 +297,7 @@ class DocbaseClient(Netwise):
         )
 
     def _isobfuscated(self, password):
-        if re.match("^([0-9a-f]{2})+$", password) is None:
+        if not re.match("^([0-9a-f]{2})+$", password):
             return False
         for x in re.findall("[0-9a-f]{2}", password):
             if int(x, 16) != 0xB6 and (int(x, 16) ^ 0xB6) > 127:
@@ -305,27 +305,27 @@ class DocbaseClient(Netwise):
         return True
 
     def _as_object(self, object_id, method, request=None, cls=TypedObject):
-        if object_id is None:
+        if not object_id:
             object_id = NULL_ID
         return self.apply(RPC_APPLY_FOR_OBJECT, object_id, method, request, cls)
 
     def _as_collection(self, object_id, method, request=None, cls=Collection):
-        if object_id is None:
+        if not object_id:
             object_id = NULL_ID
         return self.apply(RPC_APPLY, object_id, method, request, cls)
 
     def _as_string(self, object_id, method, request=None, cls=None):
-        if object_id is None:
+        if not object_id:
             object_id = NULL_ID
         return self.apply(RPC_APPLY_FOR_STRING, object_id, method, request, cls)
 
     def _as_id(self, object_id, method, request=None, cls=None):
-        if object_id is None:
+        if not object_id:
             object_id = NULL_ID
         return self.apply(RPC_APPLY_FOR_ID, object_id, method, request, cls)
 
     def _as_time(self, object_id, method, request=None, cls=None):
-        if object_id is None:
+        if not object_id:
             object_id = NULL_ID
         return self.apply(RPC_APPLY_FOR_TIME, object_id, method, request, cls)
 
@@ -348,7 +348,7 @@ class DocbaseClient(Netwise):
 
     def _add_entry_point(self, name):
         pep_name = DocbaseClient._pep_name(name)
-        if getattr(DocbaseClient, pep_name, None) is not None:
+        if getattr(DocbaseClient, pep_name, None):
             return
         elif name in self.knowncommands:
             command = self.knowncommands[name]

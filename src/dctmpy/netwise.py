@@ -22,7 +22,7 @@ class Netwise(object):
         self.__socket = None
 
     def _connected(self):
-        if self.__socket is None:
+        if not self.__socket:
             return False
         return True
 
@@ -31,7 +31,7 @@ class Netwise(object):
             try:
                 host = self.sockopts.get('host', None)
                 port = self.sockopts.get('port', None)
-                if host is None or port is None:
+                if not host or not (port > -1):
                     raise RuntimeError("Invalid host or port")
                 self.__socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.__socket.connect((host, port))

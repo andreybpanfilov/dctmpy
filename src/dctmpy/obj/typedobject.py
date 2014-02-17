@@ -65,7 +65,7 @@ class TypedObject(object):
 
         type_name = self._next_token()
 
-        if type_name is None or len(type_name) == 0:
+        if not type_name:
             raise ParserException("Wrong type name")
 
         if self.serversion > 0:
@@ -96,7 +96,7 @@ class TypedObject(object):
         attr_name = self.type.get(position).name
         attr_length = self.type.get(position).length
 
-        if attr_type is None:
+        if not attr_type:
             raise ParserException("Unknown type")
 
         result = []
@@ -223,15 +223,15 @@ class TypedObject(object):
     def _next_token(self, separator=DEFAULT_SEPARATOR):
         self.buffer = re.sub("^%s" % separator, "", self.buffer)
         m = re.search(separator, self.buffer)
-        if m is not None:
+        if m:
             return self._substr(m.start(0))
         else:
             return self._substr(len(self.buffer))
 
     def _next_string(self, pattern=None, separator=DEFAULT_SEPARATOR):
         value = self._next_token(separator)
-        if pattern is not None:
-            if re.match(pattern, value) is None:
+        if pattern:
+            if not re.match(pattern, value):
                 raise ParserException("Invalid string: %s for regexp %s" % (value, pattern))
         return value
 

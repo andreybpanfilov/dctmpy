@@ -76,7 +76,7 @@ class Request(object):
 
     def _build_request(self):
         data = self._build_header()
-        if self.data is not None:
+        if self.data:
             data.extend(self.data)
         length = len(data)
         data.insert(0, length & 0x000000ff)
