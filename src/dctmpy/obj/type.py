@@ -12,33 +12,33 @@ class TypeObject(TypedObject):
         self.__type_count = None
         super(TypeObject, self).__init__(**kwargs)
 
-    def __read__(self, buf=None):
-        self.__read_header__()
+    def _read(self, buf=None):
+        self._read_header()
         type_info = None
         if self.__type_count is not None:
             for i in xrange(0, self.__type_count):
-                type_info = self.__deserialize_child_type__()
+                type_info = self._deserialize_child_type()
         else:
             while not isempty(self.buffer()):
-                type_info = self.__deserialize_child_type__()
+                type_info = self._deserialize_child_type()
         self.type = type_info
 
-    def __deserialize_child_type__(self):
-        child_type = self.__read_type__()
+    def _deserialize_child_type(self):
+        child_type = self._read_type()
         if child_type is not None:
             add_type_to_cache(child_type)
         return child_type
 
-    def __read_type__(self):
-        return super(TypeObject, self).__read_type__()
+    def _read_type(self):
+        return super(TypeObject, self)._read_type()
 
-    def __read_header__(self):
-        self.__type_count = self.__read_int__()
+    def _read_header(self):
+        self.__type_count = self._read_int()
         if self.serversion > 0:
-            self.__read_int__()
+            self._read_int()
 
-    def __need_read_type__(self):
+    def _need_read_type(self):
         return False
 
-    def __need_read_object__(self):
+    def _need_read_object(self):
         return False

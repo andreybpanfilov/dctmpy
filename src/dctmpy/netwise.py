@@ -21,13 +21,13 @@ class Netwise(object):
             self.sequence = 0
         self.__socket = None
 
-    def __connected__(self):
+    def _connected(self):
         if self.__socket is None:
             return False
         return True
 
-    def __socket__(self):
-        if not self.__connected__():
+    def _socket(self):
+        if not self._connected():
             try:
                 host = self.sockopts.get('host', None)
                 port = self.sockopts.get('port', None)
@@ -42,7 +42,7 @@ class Netwise(object):
 
     def disconnect(self):
         try:
-            if self.__connected__():
+            if self._connected():
                 self.__socket.close()
         finally:
             self.__socket = None
@@ -52,7 +52,7 @@ class Netwise(object):
 
     def request(self, **kwargs):
         return Request(**dict(kwargs, **{
-            'socket': self.__socket__(),
+            'socket': self._socket(),
             'sequence': ++self.sequence,
             'version': self.version,
             'release': self.release,

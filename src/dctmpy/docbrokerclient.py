@@ -25,17 +25,17 @@ class DocbrokerClient(Netwise):
 
     def get_docbasemap(self):
         return DocbaseMap(
-            buffer=self.__request_object__(DocbrokerClient.__docbasemap_request__(version, handle))
+            buffer=self._request_object(DocbrokerClient._docbasemap_request(version, handle))
         )
 
     def get_servermap(self, docbase):
         servermap = DocbaseMap(
-            buffer=self.__request_object__(DocbrokerClient.__servermap_request__(version, handle, docbase)))
+            buffer=self._request_object(DocbrokerClient._servermap_request(version, handle, docbase)))
         if not 'r_host_name' in servermap:
             raise RuntimeError("No servers for docbase %s on %s" % (docbase, parse_address(servermap['i_host_addr'])))
         return servermap
 
-    def __request_object__(self, data):
+    def _request_object(self, data):
         try:
             result = self.request(type=1, data=[data], immediate=True).receive().next()
         finally:
@@ -43,7 +43,7 @@ class DocbrokerClient(Netwise):
         return result
 
     @staticmethod
-    def __docbasemap_request__(handle, version):
+    def _docbasemap_request(handle, version):
         obj = TypedObject(serversion=0)
         obj.add(AttrValue(name="DBR_REQUEST_NAME", type=STRING, values=["DBRN_GET_DOCBASE_MAP"]))
         obj.add(AttrValue(name="DBR_REQUEST_VERSION", type=INT, values=[1]))
@@ -52,7 +52,7 @@ class DocbrokerClient(Netwise):
         return obj
 
     @staticmethod
-    def __servermap_request__(handle, version, docbase):
+    def _servermap_request(handle, version, docbase):
         obj = TypedObject(serversion=0)
         obj.add(AttrValue(name="r_docbase_name", type=STRING, values=[docbase]))
         obj.add(AttrValue(name="r_map_name", type=STRING, values=["mn_cs_map"]))

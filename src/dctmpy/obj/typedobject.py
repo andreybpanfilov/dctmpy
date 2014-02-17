@@ -24,65 +24,65 @@ class TypedObject(object):
                 self.iso8601time = False
 
         if not isempty(self.buffer):
-            self.__read__()
+            self._read()
 
-    def __read__(self, buf=None):
+    def _read(self, buf=None):
         if isempty(buf) and isempty(self.buffer):
             raise ParserException("Empty data")
         elif not isempty(buf):
             self.buffer = buf
 
-        self.__read_header__()
+        self._read_header()
 
-        if self.type is None and self.__need_read_type__():
-            self.type = self.__read_type__()
+        if self.type is None and self._need_read_type():
+            self.type = self._read_type()
 
-        if self.__need_read_object__():
-            self.__read_object__()
+        if self._need_read_object():
+            self._read_object()
 
-    def __read_header__(self):
+    def _read_header(self):
         if self.serversion > 0:
-            serversion = self.__read_int__()
+            serversion = self._read_int()
             if serversion != self.serversion:
                 raise RuntimeError(
                     "Invalid serialization version %d, expected %d" % (serversion, self.serversion))
 
-    def __read_type__(self):
-        header = self.__next_token__()
+    def _read_type(self):
+        header = self._next_token()
         if header != "TYPE":
             raise ParserException("Invalid type header: %s" % header)
 
-        type_info = self.__read_type_info__()
-        for i in xrange(0, self.__read_int__()):
-            type_info.append(self.__read_attr_info__())
+        type_info = self._read_type_info()
+        for i in xrange(0, self._read_int()):
+            type_info.append(self._read_attr_info())
 
         return type_info
 
-    def __read_object__(self):
-        header = self.__next_token__()
+    def _read_object(self):
+        header = self._next_token()
         if "OBJ" != header:
             raise ParserException("Invalid header, expected OBJ, got: %s" % header)
 
-        type_name = self.__next_token__()
+        type_name = self._next_token()
 
         if type_name is None or len(type_name) == 0:
             raise ParserException("Wrong type name")
 
         if self.serversion > 0:
-            self.__read_int__()
-            self.__read_int__()
-            self.__read_int__()
+            self._read_int()
+            self._read_int()
+            self._read_int()
 
         if self.type is None or type_name != self.type.name:
             raise ParserException("No type info for %s" % type_name)
 
-        for i in xrange(0, self.__read_int__()):
-            self.__read_attr__(i)
+        for i in xrange(0, self._read_int()):
+            self._read_attr(i)
 
-        self.__read_extended_attr__()
+        self._read_extended_attr()
 
-    def __read_attr__(self, index):
-        position = self.__if_d6(self.__read_base64_int__)
+    def _read_attr(self, index):
+        position = self._if_d6(self._read_base64_int)
         if position is None:
             position = index
 
@@ -90,8 +90,8 @@ class TypedObject(object):
         attr_type = self.type.get(position).type
 
         if self.serversion == 2:
-            repeating = self.__next_string__(REPEATING_PATTERN) == REPEATING
-            attr_type = TYPES[self.__read_int__()]
+            repeating = self._next_string(REPEATING_PATTERN) == REPEATING
+            attr_type = TYPES[self._read_int()]
 
         attr_name = self.type.get(position).name
         attr_length = self.type.get(position).length
@@ -102,10 +102,10 @@ class TypedObject(object):
         result = []
 
         if not repeating:
-            result.append(self.__read_attr_value__(attr_type))
+            result.append(self._read_attr_value(attr_type))
         else:
-            for i in xrange(0, self.__read_int__()):
-                result.append(self.__read_attr_value__(attr_type))
+            for i in xrange(0, self._read_int()):
+                result.append(self._read_attr_value(attr_type))
 
         self.add(AttrValue(**{
             'name': attr_name,
@@ -119,13 +119,13 @@ class TypedObject(object):
     def add(self, value):
         self.__attrs[value.name] = value
 
-    def __read_extended_attr__(self):
-        attr_count = self.__read_int__()
+    def _read_extended_attr(self):
+        attr_count = self._read_int()
         for i in xrange(0, attr_count):
-            attr_name = self.__next_string__(ATTRIBUTE_PATTERN)
-            attr_type = self.__next_string__(ATTRIBUTE_PATTERN)
-            repeating = REPEATING == self.__next_string__()
-            length = self.__read_int__()
+            attr_name = self._next_string(ATTRIBUTE_PATTERN)
+            attr_type = self._next_string(ATTRIBUTE_PATTERN)
+            repeating = REPEATING == self._next_string()
+            length = self._read_int()
 
             if isempty(attr_type):
                 raise ParserException("Unknown typedef: %s" % attr_type)
@@ -133,10 +133,10 @@ class TypedObject(object):
             result = []
 
             if not repeating:
-                result.append(self.__read_attr_value__(attr_type))
+                result.append(self._read_attr_value(attr_type))
             else:
-                for i in xrange(1, self.__read_int__()):
-                    result.append(self.__read_attr_value__(attr_type))
+                for i in xrange(1, self._read_int()):
+                    result.append(self._read_attr_value(attr_type))
 
             self.__attrs[attr_name] = AttrValue(**{
                 'name': attr_name,
@@ -146,42 +146,42 @@ class TypedObject(object):
                 'repeating': repeating,
             })
 
-    def __read_attr_value__(self, attr_type):
+    def _read_attr_value(self, attr_type):
         return {
-            INT: lambda: self.__read_int__(),
-            STRING: lambda: self.__read_string__(),
-            TIME: lambda: self.__read_time__(),
-            BOOL: lambda: self.__read_boolean__(),
-            ID: lambda: self.__next_string__(),
-            DOUBLE: lambda: self.__next_string__(),
-            UNDEFINED: lambda: self.__next_string__()
+            INT: lambda: self._read_int(),
+            STRING: lambda: self._read_string(),
+            TIME: lambda: self._read_time(),
+            BOOL: lambda: self._read_boolean(),
+            ID: lambda: self._next_string(),
+            DOUBLE: lambda: self._next_string(),
+            UNDEFINED: lambda: self._next_string()
         }[attr_type]()
 
-    def __read_type_info__(self):
+    def _read_type_info(self):
         return TypeInfo(**{
-            'name': self.__next_string__(ATTRIBUTE_PATTERN),
-            'id': self.__next_string__(ATTRIBUTE_PATTERN),
-            'vstamp': self.__if_d6(self.__read_int__),
-            'version': self.__if_d6(self.__read_int__),
-            'cache': self.__if_d6(self.__read_int__),
-            'super': self.__next_string__(ATTRIBUTE_PATTERN),
-            'sharedparent': self.__if_d6(self.__next_string__, None, ATTRIBUTE_PATTERN),
-            'aspectname': self.__if_d6(self.__next_string__, None, ATTRIBUTE_PATTERN),
-            'aspectshareflag': self.__if_d6(self.__read_boolean__),
+            'name': self._next_string(ATTRIBUTE_PATTERN),
+            'id': self._next_string(ATTRIBUTE_PATTERN),
+            'vstamp': self._if_d6(self._read_int),
+            'version': self._if_d6(self._read_int),
+            'cache': self._if_d6(self._read_int),
+            'super': self._next_string(ATTRIBUTE_PATTERN),
+            'sharedparent': self._if_d6(self._next_string, None, ATTRIBUTE_PATTERN),
+            'aspectname': self._if_d6(self._next_string, None, ATTRIBUTE_PATTERN),
+            'aspectshareflag': self._if_d6(self._read_boolean),
             'serversion': self.serversion,
         })
 
-    def __read_attr_info__(self):
+    def _read_attr_info(self):
         return AttrInfo(**{
-            'position': self.__if_d6(self.__read_base64_int__),
-            'name': self.__next_string__(ATTRIBUTE_PATTERN),
-            'type': self.__next_string__(TYPE_PATTERN),
-            'repeating': REPEATING == self.__next_string__(),
-            'length': self.__read_int__(),
-            'restriction': self.__if_d6(self.__read_int__),
+            'position': self._if_d6(self._read_base64_int),
+            'name': self._next_string(ATTRIBUTE_PATTERN),
+            'type': self._next_string(TYPE_PATTERN),
+            'repeating': REPEATING == self._next_string(),
+            'length': self._read_int(),
+            'restriction': self._if_d6(self._read_int),
         })
 
-    def __if_d6(self, method, default=None, *args, **kwargs):
+    def _if_d6(self, method, default=None, *args, **kwargs):
         if self.serversion > 0:
             return method(*args, **kwargs)
         return default
@@ -209,52 +209,52 @@ class TypedObject(object):
                     result += "%s\n" % value
         return result
 
-    def __need_read_type__(self):
+    def _need_read_type(self):
         return True
 
-    def __need_read_object__(self):
+    def _need_read_object(self):
         return True
 
-    def __substr__(self, length):
+    def _substr(self, length):
         data = self.buffer
         self.buffer = data[length:]
         return data[:length]
 
-    def __next_token__(self, separator=DEFAULT_SEPARATOR):
+    def _next_token(self, separator=DEFAULT_SEPARATOR):
         self.buffer = re.sub("^%s" % separator, "", self.buffer)
         m = re.search(separator, self.buffer)
         if m is not None:
-            return self.__substr__(m.start(0))
+            return self._substr(m.start(0))
         else:
-            return self.__substr__(len(self.buffer))
+            return self._substr(len(self.buffer))
 
-    def __next_string__(self, pattern=None, separator=DEFAULT_SEPARATOR):
-        value = self.__next_token__(separator)
+    def _next_string(self, pattern=None, separator=DEFAULT_SEPARATOR):
+        value = self._next_token(separator)
         if pattern is not None:
             if re.match(pattern, value) is None:
                 raise ParserException("Invalid string: %s for regexp %s" % (value, pattern))
         return value
 
-    def __read_int__(self):
-        return int(self.__next_string__(INTEGER_PATTERN))
+    def _read_int(self):
+        return int(self._next_string(INTEGER_PATTERN))
 
-    def __read_base64_int__(self):
-        return pseudo_base64_to_int(self.__next_string__(BASE64_PATTERN))
+    def _read_base64_int(self):
+        return pseudo_base64_to_int(self._next_string(BASE64_PATTERN))
 
-    def __read_string__(self):
-        self.__next_string__(ENCODING_PATTERN)
-        return self.__substr__(self.__read_int__() + 1)[1:]
+    def _read_string(self):
+        self._next_string(ENCODING_PATTERN)
+        return self._substr(self._read_int() + 1)[1:]
 
-    def __read_time__(self):
-        value = self.__next_token__(CRLF_PATTERN)
+    def _read_time(self):
+        value = self._next_token(CRLF_PATTERN)
         if value.startswith(" "):
             value = value[1:]
         if value.startswith("xxx "):
             value = value[4:]
         return parse_time(value)
 
-    def __read_boolean__(self):
-        return bool(self.__next_string__(BOOLEAN_PATTERN))
+    def _read_boolean(self):
+        return bool(self._next_string(BOOLEAN_PATTERN))
 
     def __getattr__(self, name):
         if name in self.__attrs:

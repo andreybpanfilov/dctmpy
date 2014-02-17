@@ -14,8 +14,8 @@ class EntryPoints(TypedObject):
             **{'serversion': 0}
         ))
 
-    def __read__(self, buf=None):
-        super(EntryPoints, self).__read__(buf)
+    def _read(self, buf=None):
+        super(EntryPoints, self)._read(buf)
         if len(self) > 0:
             self.__methods = dict(zip(self['name'], self['pos']))
 

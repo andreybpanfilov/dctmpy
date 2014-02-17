@@ -14,28 +14,28 @@ class DocbrokerObject(TypedObject):
             **{'serversion': 0}
         ))
 
-    def __read_type__(self):
+    def _read_type(self):
         pass
 
-    def __read_object__(self):
-        header = self.__next_token__()
+    def _read_object(self):
+        header = self._next_token()
         if "OBJ" != header:
             raise ParserException("Invalid header, expected OBJ, got: %s" % header)
 
-        type_name = self.__next_token__()
+        type_name = self._next_token()
         if isempty(type_name):
             raise ParserException("Wrong type name")
 
-        self.__read_int__()
+        self._read_int()
 
-        for i in xrange(0, self.__read_int__()):
-            self.__read_attr__(i)
+        for i in xrange(0, self._read_int()):
+            self._read_attr(i)
 
-    def __read_attr__(self, index):
-        attr_name = self.__next_string__(ATTRIBUTE_PATTERN)
-        attr_type = self.__next_string__(ATTRIBUTE_PATTERN)
-        repeating = self.__next_string__(REPEATING_PATTERN) == REPEATING
-        attr_length = self.__read_int__()
+    def _read_attr(self, index):
+        attr_name = self._next_string(ATTRIBUTE_PATTERN)
+        attr_type = self._next_string(ATTRIBUTE_PATTERN)
+        repeating = self._next_string(REPEATING_PATTERN) == REPEATING
+        attr_length = self._read_int()
 
         if attr_type is None:
             raise ParserException("Unknown type")
@@ -43,10 +43,10 @@ class DocbrokerObject(TypedObject):
         result = []
 
         if not repeating:
-            result.append(self.__read_attr_value__(attr_type))
+            result.append(self._read_attr_value(attr_type))
         else:
-            for i in xrange(0, self.__read_int__()):
-                result.append(self.__read_attr_value__(attr_type))
+            for i in xrange(0, self._read_int()):
+                result.append(self._read_attr_value(attr_type))
 
         self.add(AttrValue(**{
             'name': attr_name,

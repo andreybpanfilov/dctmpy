@@ -15,10 +15,10 @@ class Collection(TypedObject):
             self.__setattr__(ATTRIBUTE_PREFIX + attribute, kwargs.pop(attribute, None))
         super(Collection, self).__init__(**kwargs)
 
-    def __need_read_type__(self):
+    def _need_read_type(self):
         return True
 
-    def __need_read_object__(self):
+    def _need_read_object(self):
         return False
 
     def next_record(self):
@@ -31,7 +31,7 @@ class Collection(TypedObject):
             self.records = response.records
             self.maybemore = response.maybemore
             if self.serversion > 0:
-                self.__read_int__()
+                self._read_int()
 
         if not isempty(self.buffer) and (self.records is None or self.records > 0):
             try:
@@ -93,14 +93,14 @@ class PersistentCollection(Collection):
     def __init__(self, **kwargs):
         super(PersistentCollection, self).__init__(**kwargs)
 
-    def __read__(self, buf=None):
+    def _read(self, buf=None):
         if isempty(buf) and isempty(self.buffer):
             raise ParserException("Empty data")
         if not isempty(buf):
             self.buffer = buf
-        self.type = self.session.get_type(self.__next_string__(), 0)
+        self.type = self.session.get_type(self._next_string(), 0)
 
-    def __need_read_type__(self):
+    def _need_read_type(self):
         return False
 
     def next_record(self):
@@ -117,13 +117,13 @@ class CollectionEntry(TypedObject):
     def __init__(self, **kwargs):
         super(CollectionEntry, self).__init__(**kwargs)
 
-    def __read_header__(self):
+    def _read_header(self):
         pass
 
-    def __read__(self, buf=None):
-        super(CollectionEntry, self).__read__(buf)
+    def _read(self, buf=None):
+        super(CollectionEntry, self)._read(buf)
         if self.serversion > 0:
-            self.__read_int__()
+            self._read_int()
 
     def __getattr__(self, name):
         if name in CollectionEntry.attributes:
@@ -142,14 +142,14 @@ class PersistentCollectionEntry(CollectionEntry):
     def __init__(self, **kwargs):
         super(PersistentCollectionEntry, self).__init__(**kwargs)
 
-    def __read_header__(self):
+    def _read_header(self):
         if not self.serversion > 0:
-            self.__next_string__()
+            self._next_string()
 
-    def __read__(self, buf=None):
-        super(PersistentCollectionEntry, self).__read__(buf)
+    def _read(self, buf=None):
+        super(PersistentCollectionEntry, self)._read(buf)
         if self.serversion > 0:
-            self.__read_int__()
+            self._read_int()
 
     def __getattr__(self, name):
         return super(PersistentCollectionEntry, self).__getattr__(name)

@@ -36,7 +36,7 @@ class DocbaseClient(Netwise):
         if self.session is None:
             self.session = NULL_ID
         if self.docbaseid is None or self.docbaseid == -1:
-            self.__resolve_docbase_id__()
+            self._resolve_docbase_id()
         if self.messages is None:
             self.messages = []
         if self.entrypoints is None:
@@ -45,22 +45,22 @@ class DocbaseClient(Netwise):
                 'GET_ERRORS': 558,
             }
 
-        self.__register_known_commands__()
+        self._register_known_commands()
 
         for name in self.entrypoints.keys():
-            self.__add_entry_point__(name)
+            self._add_entry_point(name)
         if self.serversionhint is None:
             self.serversionhint = CLIENT_VERSION_ARRAY[3]
 
         self.faulted = False
 
-        self.__connect__()
-        self.__fetch_entry_points__()
+        self._connect()
+        self._fetch_entry_points()
 
         if self.password is not None and self.username is not None:
             self.authenticate()
 
-    def __resolve_docbase_id__(self):
+    def _resolve_docbase_id(self):
         response = self.request(
             type=RPC_NEW_SESSION_BY_ADDR,
             data=[
@@ -94,10 +94,10 @@ class DocbaseClient(Netwise):
         finally:
             self.session = None
 
-    def __reconnect__(self):
+    def _reconnect(self):
         ''
 
-    def __connect__(self):
+    def _connect(self):
         response = self.request(
             type=RPC_NEW_SESSION_BY_ADDR,
             data=[
@@ -167,7 +167,7 @@ class DocbaseClient(Netwise):
         if (o_data & 0x02 != 0) and not self.faulted:
             try:
                 self.faulted = True
-                self.__get_messages__()
+                self._get_messages()
             finally:
                 self.faulted = False
 
@@ -193,7 +193,7 @@ class DocbaseClient(Netwise):
         if object_id is None:
             object_id = NULL_ID
 
-        response = self.rpc(rpc_id, [self.__get_method__(method), object_id, request])
+        response = self.rpc(rpc_id, [self._get_method(method), object_id, request])
         data = response.data
 
         if rpc_id == RPC_APPLY_FOR_STRING:
@@ -234,7 +234,7 @@ class DocbaseClient(Netwise):
 
         return result
 
-    def __get_messages__(self):
+    def _get_messages(self):
         self.messages = [x for x in self.get_errors()]
 
     def authenticate(self, username=None, password=None):
@@ -246,7 +246,7 @@ class DocbaseClient(Netwise):
         if self.password is None:
             raise RuntimeError("Empty password")
 
-        result = self.authenticate_user(self.username, self.__obfuscate__(self.password))
+        result = self.authenticate_user(self.username, self._obfuscate(self.password))
         if result['RETURN_VALUE'] != 1:
             raise RuntimeError("Unable to authenticate")
 
@@ -259,10 +259,10 @@ class DocbaseClient(Netwise):
     def close_collection(self, collection):
         self.rpc(RPC_CLOSE_COLLECTION, [collection])
 
-    def __fetch_entry_points__(self):
+    def _fetch_entry_points(self):
         self.entrypoints = self.entry_points().methods()
         for name in self.entrypoints:
-            self.__add_entry_point__(name)
+            self._add_entry_point(name)
 
     def get_by_qualification(self, qualification):
         collection = self.query("select r_object_id from %s" % qualification)
@@ -289,14 +289,14 @@ class DocbaseClient(Netwise):
             raise RuntimeError("Error occurred while executing query: %s" % query, e)
         return collection
 
-    def __obfuscate__(self, password):
-        if self.__isobfuscated__(password):
+    def _obfuscate(self, password):
+        if self._isobfuscated(password):
             return password
         return "".join(
             "%02x" % [x ^ 0xB6, 0xB6][x == 0xB6] for x in (ord(x) for x in password[::-1])
         )
 
-    def __isobfuscated__(self, password):
+    def _isobfuscated(self, password):
         if re.match("^([0-9a-f]{2})+$", password) is None:
             return False
         for x in re.findall("[0-9a-f]{2}", password):
@@ -304,32 +304,32 @@ class DocbaseClient(Netwise):
                 return False
         return True
 
-    def __as_object__(self, object_id, method, request=None, cls=TypedObject):
+    def _as_object(self, object_id, method, request=None, cls=TypedObject):
         if object_id is None:
             object_id = NULL_ID
         return self.apply(RPC_APPLY_FOR_OBJECT, object_id, method, request, cls)
 
-    def __as_collection__(self, object_id, method, request=None, cls=Collection):
+    def _as_collection(self, object_id, method, request=None, cls=Collection):
         if object_id is None:
             object_id = NULL_ID
         return self.apply(RPC_APPLY, object_id, method, request, cls)
 
-    def __as_string__(self, object_id, method, request=None, cls=None):
+    def _as_string(self, object_id, method, request=None, cls=None):
         if object_id is None:
             object_id = NULL_ID
         return self.apply(RPC_APPLY_FOR_STRING, object_id, method, request, cls)
 
-    def __as_id__(self, object_id, method, request=None, cls=None):
+    def _as_id(self, object_id, method, request=None, cls=None):
         if object_id is None:
             object_id = NULL_ID
         return self.apply(RPC_APPLY_FOR_ID, object_id, method, request, cls)
 
-    def __as_time__(self, object_id, method, request=None, cls=None):
+    def _as_time(self, object_id, method, request=None, cls=None):
         if object_id is None:
             object_id = NULL_ID
         return self.apply(RPC_APPLY_FOR_TIME, object_id, method, request, cls)
 
-    def __get_method__(self, name):
+    def _get_method(self, name):
         if name not in self.entrypoints:
             raise RuntimeError("Unknown method: %s" % name)
         return self.entrypoints[name]
@@ -346,8 +346,8 @@ class DocbaseClient(Netwise):
         else:
             super(DocbaseClient, self).__setattr__(name, value)
 
-    def __add_entry_point__(self, name):
-        pep_name = DocbaseClient.__pep_name__(name)
+    def _add_entry_point(self, name):
+        pep_name = DocbaseClient._pep_name(name)
         if getattr(DocbaseClient, pep_name, None) is not None:
             return
         elif name in self.knowncommands:
@@ -375,40 +375,35 @@ class DocbaseClient(Netwise):
                         return method(self, NULL_ID, name, request(self, *args), cls)
         else:
             def inner(self, object_id=NULL_ID, request=None, cls=Collection):
-                return self.__as_collection__(object_id, name, request, cls)
+                return self._as_collection(object_id, name, request, cls)
 
         inner.__name__ = pep_name
         setattr(self.__class__, inner.__name__, inner)
 
-    def __register_known_commands__(self):
+    def _register_known_commands(self):
         cls = self.__class__
-        self.__register__(
-            RpcCommand('GET_SERVER_CONFIG', cls.__as_object__, TypedObject, cls.__server_config_request__, False))
-        self.__register__(
-            RpcCommand('GET_DOCBASE_CONFIG', cls.__as_object__, TypedObject, cls.__docbase_config_request__, False))
-        self.__register__(
-            RpcCommand('ENTRY_POINTS', cls.__as_object__, EntryPoints, cls.__entry_points_request__, False))
-        self.__register__(RpcCommand('FETCH', cls.__as_object__, Persistent, None, True))
-        self.__register__(RpcCommand('AUTHENTICATE_USER', cls.__as_object__, TypedObject, cls.__auth_request__, False))
-        self.__register__(
-            RpcCommand('GET_ERRORS', cls.__as_collection__, Collection, cls.__get_errors_request__, False))
-        self.__register__(RpcCommand('FETCH_TYPE', cls.__as_object__, TypedObject, cls.__fetch_type_request__, False))
-        self.__register__(RpcCommand('EXEC', cls.__as_collection__, Collection, cls.__query_request__, False))
-        self.__register__(RpcCommand('TIME', cls.__as_time__, TypedObject, None, False))
-        self.__register__(RpcCommand('COUNT_SESSIONS', cls.__as_object__, TypedObject, None, False))
-        self.__register__(
-            RpcCommand('EXEC_SELECT_SQL', cls.__as_collection__, Collection, cls.__sql_query_request__, False))
-        self.__register__(
-            RpcCommand('FTINDEX_AGENT_ADMIN', cls.__as_object__, TypedObject, cls.__index_agent_status_request__,
-                       False))
+        self._register(RpcCommand('GET_SERVER_CONFIG', cls._as_object, TypedObject, cls._server_config_request, False))
+        self._register(
+            RpcCommand('GET_DOCBASE_CONFIG', cls._as_object, TypedObject, cls._docbase_config_request, False))
+        self._register(RpcCommand('ENTRY_POINTS', cls._as_object, EntryPoints, cls._entry_points_request, False))
+        self._register(RpcCommand('FETCH', cls._as_object, Persistent, None, True))
+        self._register(RpcCommand('AUTHENTICATE_USER', cls._as_object, TypedObject, cls._auth_request, False))
+        self._register(RpcCommand('GET_ERRORS', cls._as_collection, Collection, cls._get_errors_request, False))
+        self._register(RpcCommand('FETCH_TYPE', cls._as_object, TypedObject, cls._fetch_type_request, False))
+        self._register(RpcCommand('EXEC', cls._as_collection, Collection, cls._query_request, False))
+        self._register(RpcCommand('TIME', cls._as_time, TypedObject, None, False))
+        self._register(RpcCommand('COUNT_SESSIONS', cls._as_object, TypedObject, None, False))
+        self._register(RpcCommand('EXEC_SELECT_SQL', cls._as_collection, Collection, cls._sql_query_request, False))
+        self._register(
+            RpcCommand('FTINDEX_AGENT_ADMIN', cls._as_object, TypedObject, cls._index_agent_status_request, False))
 
-    def __register__(self, command):
+    def _register(self, command):
         if not self.knowncommands:
             self.knowncommands = {}
         self.knowncommands[command.command] = command
 
     @staticmethod
-    def __entry_points_request__(session):
+    def _entry_points_request(session):
         obj = TypedObject(session=session)
         obj.add(AttrValue(name="LANGUAGE", type=INT, values=[get_locale_id()]))
         obj.add(AttrValue(name="CHARACTER_SET", type=INT, values=[get_charset_id()]))
@@ -433,7 +428,7 @@ class DocbaseClient(Netwise):
         return obj
 
     @staticmethod
-    def __auth_request__(session, username, password):
+    def _auth_request(session, username, password):
         obj = TypedObject(session=session)
         obj.add(AttrValue(name="CONNECT_POOLING", type=BOOL, values=[False]))
         obj.add(AttrValue(name="USER_PASSWORD", type=STRING, values=[password]))
@@ -443,7 +438,7 @@ class DocbaseClient(Netwise):
         return obj
 
     @staticmethod
-    def __server_config_request__(session):
+    def _server_config_request(session):
         obj = TypedObject(session=session)
         obj.add(AttrValue(name="OBJECT_TYPE", type=STRING, values=["dm_server_config"]))
         obj.add(AttrValue(name="FOR_REVERT", type=BOOL, values=[False]))
@@ -451,7 +446,7 @@ class DocbaseClient(Netwise):
         return obj
 
     @staticmethod
-    def __docbase_config_request__(session):
+    def _docbase_config_request(session):
         obj = TypedObject(session=session)
         obj.add(AttrValue(name="OBJECT_TYPE", type=STRING, values=["dm_docbase_config"]))
         obj.add(AttrValue(name="FOR_REVERT", type=BOOL, values=[False]))
@@ -459,20 +454,20 @@ class DocbaseClient(Netwise):
         return obj
 
     @staticmethod
-    def __fetch_type_request__(session, typename, vstamp):
+    def _fetch_type_request(session, typename, vstamp):
         obj = TypedObject(session=session)
         obj.add(AttrValue(name="TYPE_NAME", type=STRING, values=[typename]))
         obj.add(AttrValue(name="CACHE_VSTAMP", type=INT, values=[vstamp]))
         return obj
 
     @staticmethod
-    def __get_errors_request__(session):
+    def _get_errors_request(session):
         obj = TypedObject(session=session)
         obj.add(AttrValue(name="OBJECT_TYPE", type=STRING, values=["dmError"]))
         return obj
 
     @staticmethod
-    def __query_request__(session, query, for_update, batch_hint, bof_dql=False):
+    def _query_request(session, query, for_update, batch_hint, bof_dql=False):
         obj = TypedObject(session=session)
         obj.add(AttrValue(name="QUERY", type=STRING, values=[query]))
         obj.add(AttrValue(name="FOR_UPDATE", type=BOOL, values=[for_update]))
@@ -481,20 +476,20 @@ class DocbaseClient(Netwise):
         return obj
 
     @staticmethod
-    def __sql_query_request__(session, query, batch_hint):
+    def _sql_query_request(session, query, batch_hint):
         obj = TypedObject(session=session)
         obj.add(AttrValue(name="QUERY", type=STRING, values=[query]))
         obj.add(AttrValue(name="BATCH_HINT", type=INT, values=[batch_hint]))
         return obj
 
     @staticmethod
-    def __folder_by_path_request__(session, path):
+    def _folder_by_path_request(session, path):
         obj = TypedObject(session=session)
         obj.add(AttrValue(name="_FOLDER_PATH_", type=STRING, values=[path]))
         return obj
 
     @staticmethod
-    def __index_agent_status_request__(session, indexname, agentname):
+    def _index_agent_status_request(session, indexname, agentname):
         obj = TypedObject(session=session)
         obj.add(AttrValue(name="NAME", type=STRING, values=[indexname]))
         obj.add(AttrValue(name="AGENT_INSTANCE_NAME", type=STRING, values=[agentname]))
@@ -502,7 +497,7 @@ class DocbaseClient(Netwise):
         return obj
 
     @staticmethod
-    def __pep_name__(rpc_name):
+    def _pep_name(rpc_name):
         if 'EXEC' == rpc_name:
             return "execute"
         s = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', rpc_name)

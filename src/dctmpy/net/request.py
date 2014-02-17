@@ -34,7 +34,7 @@ class Request(object):
 
     def send(self):
         self.socket.sendall(
-            self.__build_request__()
+            self._build_request()
         )
 
     def receive(self):
@@ -74,8 +74,8 @@ class Request(object):
             'message': message
         })
 
-    def __build_request__(self):
-        data = self.__build_header__()
+    def _build_request(self):
+        data = self._build_header()
         if self.data is not None:
             data.extend(self.data)
         length = len(data)
@@ -85,7 +85,7 @@ class Request(object):
         data.insert(0, (length >> 24) & 0x000000ff)
         return data
 
-    def __build_header__(self):
+    def _build_header(self):
         header = array.array('B')
         header.extend(serialize_integer(self.sequence))
         header.extend(serialize_integer(self.type))

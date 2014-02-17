@@ -18,9 +18,9 @@ class Response(object):
         self.__message.extend(message)
         self.__data = []
 
-        self.deserialize()
+        self._deserialize()
 
-    def deserialize(self):
+    def _deserialize(self):
         while len(self.__message) > 0:
             if self.__message[0] == INTEGER_START:
                 self.__data.append(read_integer(self.__message))
