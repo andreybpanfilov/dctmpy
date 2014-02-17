@@ -10,7 +10,7 @@ else:
 
 setup(
     name='dctmpy',
-    version='current',
+    version='0.1',
     packages=['dctmpy', 'dctmpy.net', 'dctmpy.obj', 'dctmpy.nagios'],
     package_dir={'': 'src'},
     license='ZPL-2.1',
@@ -35,7 +35,7 @@ setup(
     extras_require=extras_require,
     entry_points={
         'console_scripts':
-            ['check_docbase = dctmpy.nagios.check_docbase:main [nagios]',
-             'check_docbroker = dctmpy.nagios.check_docbroker:main [nagios]']
+            ['nagios_check_docbase = dctmpy.nagios.check_docbase:main [nagios]',
+             'nagios_check_docbroker = dctmpy.nagios.check_docbroker:main [nagios]']
     }
 )
