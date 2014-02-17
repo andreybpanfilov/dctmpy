@@ -1,6 +1,7 @@
 #!python
 import argparse
 import re
+import time
 
 from nagiosplugin import Metric, Result, Summary, Check, Resource, guarded, ScalarContext
 from nagiosplugin.state import Critical, Warn, Ok, Unknown
@@ -305,13 +306,24 @@ class CheckDocbase(Resource):
             return
 
     def check_time_skew(self):
-        ''
+        try:
+            server_time = self.session.time()
+            yield Metric('timeskew', abs(server_time - time.time()), min=0, context=THRESHOLDS)
+        except Exception, e:
+            message = "Unable to acquire current time: %s" % str(e)
+            self.add_result(Critical, message)
+            return
 
     def check_query(self):
         ''
 
     def check_count_query(self):
-        ''
+        try:
+            result = CheckDocbase.read_object(self.session, self.query)
+            yield Metric('countquery', int(result.values().pop()), min=0, context=THRESHOLDS)
+        except Exception, e:
+            message = "Unable to execute query: %s" % str(e)
+            self.add_result(Critical, message)
 
     def check_work_queue(self):
         query = "SELECT count(r_object_id) AS work_queue_size FROM dmi_workitem " \
@@ -577,6 +589,7 @@ def main():
                       help="mode to use, one of: " + ", ".join(x for x in modes.keys()))
     argp.add_argument('-j', '--jobs', metavar='jobs', default='', help='jobs to check, comma-separated list')
     argp.add_argument('-n', '--name', metavar='name', default='', help='name of check that appears in output')
+    argp.add_argument('-q', '--query', metavar='query', default='', help='query to run')
     argp.add_argument('-w', '--warning', metavar='RANGE', help='warning threshold')
     argp.add_argument('-c', '--critical', metavar='RANGE', help='critical threshold')
     args = argp.parse_args()
