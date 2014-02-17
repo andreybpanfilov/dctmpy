@@ -621,12 +621,12 @@ def main():
             setattr(args, 'port', int(m.group(8)))
         if m.group(10) is not None:
             setattr(args, 'docbaseid', int(m.group(10)))
-    else:
-        if args.login and not args.authentication:
-            m = re.match('^(.*?):(.*)$', args.login)
-            if m:
-                setattr(args, 'login', m.group(1))
-                setattr(args, 'authentication', m.group(2))
+
+    if args.login and not args.authentication:
+        m = re.match('^(.*?):(.*)$', args.login)
+        if m:
+            setattr(args, 'login', m.group(1))
+            setattr(args, 'authentication', m.group(2))
 
     check = Check(CheckSummary())
     if args.name:
