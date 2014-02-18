@@ -371,7 +371,9 @@ class CheckDocbase(Resource):
             for user in CheckDocbase.read_query(self.session,
                                                 "select distinct queue_user from dm_ftindex_agent_config"):
                 count += 1
-                self.check_fulltext_queue_for_user(user['queue_user'])
+                result = self.check_fulltext_queue_for_user(user['queue_user'])
+                if result:
+                    yield result
             if count == 0:
                 message = "No indexagents"
                 self.add_result(Warn, message)
@@ -384,7 +386,7 @@ class CheckDocbase(Resource):
                 + username + "'AND task_state not in ('failed','warning')"
         try:
             result = CheckDocbase.read_object(self.session, query)
-            yield Metric(username[-20:], int(result['queue_size']), min=0, context=THRESHOLDS)
+            return Metric(username[-20:], int(result['queue_size']), min=0, context=THRESHOLDS)
         except Exception, e:
             message = "Unable to execute query: %s" % str(e)
             self.add_result(Critical, message)
