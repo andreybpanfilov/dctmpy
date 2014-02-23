@@ -2,6 +2,7 @@
 #
 #  See main module for license.
 #
+import logging
 
 from dctmpy import *
 from dctmpy.netwise import Netwise
@@ -18,7 +19,7 @@ NETWISE_INUMBER = 769
 
 class DocbaseClient(Netwise):
     attributes = ['docbaseid', 'username', 'password', 'messages', 'entrypoints', 'serversion', 'iso8601time',
-                  'session', 'serversionhint', 'docbaseconfig', 'serverconfg', 'faulted', 'knowncommands']
+                  'session', 'serversionhint', 'docbaseconfig', 'serverconfg', 'readingmessages', 'knowncommands']
 
     def __init__(self, **kwargs):
         for attribute in DocbaseClient.attributes:
@@ -52,7 +53,7 @@ class DocbaseClient(Netwise):
         if self.serversionhint is None:
             self.serversionhint = CLIENT_VERSION_ARRAY[3]
 
-        self.faulted = False
+        self.readingmessages = False
 
         self._connect()
         self._fetch_entry_points()
@@ -152,7 +153,7 @@ class DocbaseClient(Netwise):
             collection = int(response.next())
             persistent = int(response.next()) > 0
             maybemore = int(response.next()) > 0
-            valid = collection > 0
+            valid = collection >= 0
         elif rpc_id == RPC_CLOSE_COLLECTION:
             pass
         elif rpc_id == RPC_GET_NEXT_PIECE:
@@ -164,21 +165,22 @@ class DocbaseClient(Netwise):
         else:
             valid = int(response.next()) > 0
 
-        if (o_data & 0x02 != 0) and not self.faulted:
+        if (o_data & 0x02 != 0) and not self.readingmessages:
             try:
-                self.faulted = True
+                self.readingmessages = True
                 self._get_messages()
             finally:
-                self.faulted = False
+                self.readingmessages = False
 
-        if valid is not None and not valid and (o_data & 0x02 != 0) and len(self.messages) > 0:
-            reason = ", ".join(
-                "%s: %s" % (message['NAME'], message['1']) for message in
-                ((lambda x: x.pop(0))(self.messages) for i in xrange(0, len(self.messages)))
-                if message['SEVERITY'] == 3
-            )
+        #TODO in some cases (e.g. AUTHENTICATE_USER) CS returns both OBDATA and RESULT
+        if o_data & 0x02 != 0 and len(self.messages) > 0:
+            reason = self._get_message(3)
             if len(reason) > 0:
                 raise RuntimeError(reason)
+        elif valid is not None and not valid:
+            raise RuntimeError("Unknown error")
+        elif len(self.messages) > 0:
+            logging.debug(self._get_message(0))
 
         if o_data == 0x10 or (o_data == 0x01 and rpc_id == RPC_GET_NEXT_PIECE):
             message += self.rpc(RPC_GET_NEXT_PIECE).data
@@ -236,6 +238,23 @@ class DocbaseClient(Netwise):
 
     def _get_messages(self):
         self.messages = [x for x in self.get_errors()]
+
+    def _get_message(self, severity=0):
+        if not self.messages:
+            return ""
+        message = ""
+        for i in xrange(0, len(self.messages)):
+            if self.messages[i]['SEVERITY'] < severity:
+                continue
+            if len(message) > 0:
+                message += ", "
+            message += "%s: %s" % (self.messages[i]['NAME'], self.messages[i]['1'])
+
+        for i in xrange(len(self.messages) - 1, 1):
+            if self.messages[i]['SEVERITY'] >= severity:
+                self.messages.pop(i)
+
+        return message
 
     def authenticate(self, username=None, password=None):
         if username and password:

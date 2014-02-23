@@ -30,7 +30,7 @@ class Collection(TypedObject):
             self.buffer = response.data
             self.records = response.records
             self.maybemore = response.maybemore
-            if self.serversion > 0:
+            if self.serversion > 0 and not isempty(self.buffer):
                 self._read_int()
 
         if not isempty(self.buffer) and (self.records is None or self.records > 0):
@@ -79,11 +79,11 @@ class Collection(TypedObject):
             super(Collection, self).__setattr__(name, value)
 
     def close(self):
-        try:
-            if self.collection > 0:
+        if self.collection >= 0:
+            try:
                 self.session.close_collection(self.collection)
-        finally:
-            self.collection = None
+            finally:
+                self.collection = None
 
     def __del__(self):
         self.close()
