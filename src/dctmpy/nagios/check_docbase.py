@@ -4,7 +4,12 @@ import argparse
 import re
 import time
 
-from nagiosplugin import Metric, Result, Summary, Check, Resource, guarded, ScalarContext
+try:
+    from urllib.request import urlopen
+except ImportError:
+    from urllib2 import urlopen
+
+from nagiosplugin import Metric, Result, Summary, Check, Resource, guarded, ScalarResult, ScalarContext
 from nagiosplugin.state import Critical, Warn, Ok, Unknown
 
 from dctmpy.docbaseclient import DocbaseClient
@@ -42,7 +47,7 @@ class CheckDocbase(Resource):
         self.session = None
 
     def probe(self):
-        yield Metric(NULL_CONTEXT, 0, context=NULL_CONTEXT)
+        yield CustomMetric(NULL_CONTEXT, 0, context=NULL_CONTEXT)
         try:
             self.check_login()
             if not self.session:
@@ -68,9 +73,9 @@ class CheckDocbase(Resource):
         except Exception, e:
             self.add_result(Critical, "Unable to retrieve session count: " + str(e))
             return
-        yield Metric('sessioncount', int(count['hot_list_size']), min=0,
-                     max=int(count['concurrent_sessions']),
-                     context=THRESHOLDS)
+        yield CustomMetric('sessioncount', int(count['hot_list_size']), min=0,
+                           max=int(count['concurrent_sessions']),
+                           context=THRESHOLDS)
 
     def check_targets(self):
         targets = []
@@ -309,7 +314,7 @@ class CheckDocbase(Resource):
     def check_time_skew(self):
         try:
             server_time = self.session.time()
-            yield Metric('timeskew', abs(server_time - time.time()), min=0, context=THRESHOLDS)
+            yield CustomMetric('timeskew', abs(server_time - time.time()), min=0, context=THRESHOLDS)
         except Exception, e:
             message = "Unable to acquire current time: %s" % str(e)
             self.add_result(Critical, message)
@@ -325,8 +330,7 @@ class CheckDocbase(Resource):
                     message += ", "
                 message += self.format.format(**rec)
 
-            if count > 0:
-                self.add_result(Critical, message)
+            yield CustomMetric('count', count, min=0, context=THRESHOLDS).add_message(message)
         except Exception, e:
             message = "Unable to execute query: %s" % str(e)
             self.add_result(Critical, message)
@@ -334,7 +338,7 @@ class CheckDocbase(Resource):
     def check_count_query(self):
         try:
             result = CheckDocbase.read_object(self.session, self.query)
-            yield Metric('countquery', int(result.values().pop()), min=0, context=THRESHOLDS)
+            yield CustomMetric('countquery', int(result.values().pop()), min=0, context=THRESHOLDS)
         except Exception, e:
             message = "Unable to execute query: %s" % str(e)
             self.add_result(Critical, message)
@@ -346,7 +350,7 @@ class CheckDocbase(Resource):
                 "AND a_wq_name is NULLSTRING"
         try:
             result = CheckDocbase.read_object(self.session, query)
-            yield Metric('workqueue', int(result['work_queue_size']), min=0, context=THRESHOLDS)
+            yield CustomMetric('workqueue', int(result['work_queue_size']), min=0, context=THRESHOLDS)
         except Exception, e:
             message = "Unable to execute query: %s" % str(e)
             self.add_result(Critical, message)
@@ -360,7 +364,7 @@ class CheckDocbase(Resource):
                 "AND a_wq_name ='" + server_id + "'"
         try:
             result = CheckDocbase.read_object(self.session, query)
-            yield Metric(server_name[-20:], int(result['work_queue_size']), min=0, context=THRESHOLDS)
+            yield CustomMetric(server_name[-20:], int(result['work_queue_size']), min=0, context=THRESHOLDS)
         except Exception, e:
             message = "Unable to execute query: %s" % str(e)
             self.add_result(Critical, message)
@@ -386,7 +390,7 @@ class CheckDocbase(Resource):
                 + username + "'AND task_state not in ('failed','warning')"
         try:
             result = CheckDocbase.read_object(self.session, query)
-            return Metric(username[-20:], int(result['queue_size']), min=0, context=THRESHOLDS)
+            return CustomMetric(username[-20:], int(result['queue_size']), min=0, context=THRESHOLDS)
         except Exception, e:
             message = "Unable to execute query: %s" % str(e)
             self.add_result(Critical, message)
@@ -422,6 +426,7 @@ class CheckDocbase(Resource):
                 else:
                     message = "%s - OK" % config['jms_config_name'][i]
                     self.add_result(Ok, message)
+
         except Exception, e:
             message = "Unable to retrieve jms configs: %s" % str(e)
             self.add_result(Critical, message)
@@ -507,7 +512,7 @@ class CheckDocbase(Resource):
         query = "SELECT que.task_name, que.name" \
                 " FROM dmi_queue_item que, dmi_workitem wi, dmi_package pkg" \
                 " WHERE que.event = 'dm_changedactivityinstancestate'" \
-                " AND que.item_id LIKE '4%%'" \
+                " AND que.item_id LIKE '4a%%'" \
                 " AND que.MESSAGE LIKE 'Activity instance, %%, of workflow, %%, failed.'" \
                 " AND que.item_id = wi.r_object_id" \
                 " AND wi.r_workflow_id = pkg.r_workflow_id" \
@@ -574,6 +579,24 @@ class CheckSummary(Summary):
         return message
 
 
+class CustomScalarResult(ScalarResult):
+    def __str__(self):
+        if hasattr(self.metric, 'message'):
+            return self.metric.message
+        return super(CustomScalarResult, self).__str__()
+
+
+class CustomMetric(Metric):
+    def add_message(self, message):
+        self.message = message
+        return self
+
+    def replace(self, **attr):
+        if hasattr(self, 'message'):
+            return super(CustomMetric, self).replace(**attr).add_message(self.message)
+        return super(CustomMetric, self).replace(**attr)
+
+
 modes = {
     'sessioncount': [CheckDocbase.check_sessions, True, "checks active session count"],
     'targets': [CheckDocbase.check_targets, False, "checks whether server is registered on projection targets"],
@@ -636,7 +659,8 @@ def main():
     else:
         check.name = args.mode
     check.add(CheckDocbase(args, check.results))
-    check.add(ScalarContext(THRESHOLDS, getattr(args, "warning"), getattr(args, "critical")))
+    check.add(ScalarContext(THRESHOLDS, getattr(args, "warning"), getattr(args, "critical"),
+                            result_cls=CustomScalarResult))
     check.main(timeout=args.timeout)
 
 
