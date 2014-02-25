@@ -221,7 +221,9 @@ class TypedObject(object):
         return data[:length]
 
     def _next_token(self, separator=DEFAULT_SEPARATOR):
-        self.buffer = re.sub("^%s" % separator, "", self.buffer)
+        m = re.search(r'^%s' % separator, self.buffer)
+        if m:
+            self._substr(m.end(0))
         m = re.search(separator, self.buffer)
         if m:
             return self._substr(m.start(0))
