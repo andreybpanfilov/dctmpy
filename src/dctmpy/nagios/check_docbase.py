@@ -5,9 +5,9 @@ import re
 import time
 
 try:
-    from urllib.request import urlopen
+    from urllib.request import urlopen, URLError
 except ImportError:
-    from urllib2 import urlopen
+    from urllib2 import urlopen, URLError
 
 from nagiosplugin import Metric, Result, Summary, Check, Resource, guarded, ScalarResult, ScalarContext
 from nagiosplugin.state import Critical, Warn, Ok, Unknown
@@ -38,6 +38,14 @@ JOB_INTERVALS = {
     3: 24 * 60 * 60,
     4: 7 * 24 * 60 * 60
 }
+
+APP_SERVER_RESPONSES = {
+    'do_method': 'Documentum Java Method Server',
+    'do_mail': 'Documentum Mail Servlet',
+    'do_bpm': 'Documentum Java Method Server'
+}
+
+APP_SERVER_TIMEOUT = 5
 
 
 class CheckDocbase(Resource):
@@ -413,6 +421,12 @@ class CheckDocbase(Resource):
             self.add_result(Critical, message)
 
     def check_jms_status(self):
+        if not 'DUMP_JMS_CONFIG_LIST' in self.session.entrypoints:
+            self.check_jms_status_old()
+        else:
+            self.check_jms_status_new()
+
+    def check_jms_status_new(self):
         try:
             config = self.session.dump_jms_config_list()
             for i in xrange(0, len(config['jms_config_id'])):
@@ -424,13 +438,55 @@ class CheckDocbase(Resource):
                     message = "%s is marked as dead" % config['jms_config_name'][i]
                     self.add_result(Critical, message)
                 else:
-                    message = "%s - OK" % config['jms_config_name'][i]
-                    self.add_result(Ok, message)
+                    try:
+                        jmsconfig = self.session.fetch(config['jms_config_id'][i])
+                        for i in xrange(0, len(jmsconfig['servlet_name'])):
+                            name = jmsconfig['servlet_name'][i]
+                            url = jmsconfig['base_uri'][i]
+                            self.check_app_server(name, url)
+                    except Exception, e:
+                        message = "Unable to retrieve jms config %s: %s" % (config['jms_config_id'][i], str(e))
+                        self.add_result(Critical, message)
 
         except Exception, e:
             message = "Unable to retrieve jms configs: %s" % str(e)
             self.add_result(Critical, message)
             return
+
+    def check_jms_status_old(self):
+        serverconfig = self.session.serverconfig
+        for i in xrange(0, len(serverconfig['app_server_name'])):
+            name = serverconfig['app_server_name'][i]
+            url = serverconfig['app_server_uri'][i]
+            url = re.sub(r'(https?://)(localhost(\.localdomain)?|127\.0\.0\.1)([:/])?',
+                         r'\1' + serverconfig['r_host_name'] + r'\4', url)
+            self.check_app_server(name, url)
+
+    def check_app_server(self, name, url):
+        if name not in APP_SERVER_RESPONSES:
+            return
+        try:
+            response = urlopen(url, timeout=APP_SERVER_TIMEOUT)
+            if response.code != 200:
+                message = "unable to open %s: response code %d" % (url, response.code)
+                self.add_result(Critical, message)
+                return
+
+            expected = APP_SERVER_RESPONSES[name]
+            if expected not in response.read():
+                message = "text \"%s\" not found in response from %s" % (expected, url)
+                self.add_result(Critical, message)
+                return
+
+            message = "%s - OK" % url
+            self.add_result(Ok, message)
+
+        except URLError, e:
+            message = "unable to open %s: %s" % (url, e.reason)
+            self.add_result(Critical, message)
+        except Exception, e:
+            message = "unable to open %s: %s" % (url, str(e))
+            self.add_result(Critical, message)
 
     def check_login(self):
         try:
