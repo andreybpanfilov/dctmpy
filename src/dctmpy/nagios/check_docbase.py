@@ -328,6 +328,22 @@ class CheckDocbase(Resource):
             self.add_result(Critical, message)
             return
 
+    def check_method(self):
+        if not re.match("execute do_method", self.query, re.IGNORECASE):
+            message = "Wrong query: %s" % self.query
+            self.add_result(Critical, message)
+            return
+        try:
+            result = CheckDocbase.read_object(self.session, self.query)
+            message = self.format.format(**result)
+            if result['launch_failed']:
+                self.add_result(Critical, message)
+            else:
+                self.add_result(Ok, message)
+        except Exception, e:
+            message = "Unable to execute query: %s" % str(e)
+            self.add_result(Critical, message)
+
     def check_query(self):
         try:
             count = 0
@@ -660,6 +676,7 @@ modes = {
     'jobs': [CheckDocbase.check_jobs, False, "checks jobs scheduling"],
     'timeskew': [CheckDocbase.check_time_skew, True, "checks time skew between nagios host and documentum"],
     'query': [CheckDocbase.check_query, True, "checks results returned by query"],
+    'method': [CheckDocbase.check_method, True, "checks execution of method"],
     'countquery': [CheckDocbase.check_count_query, True, "checks results returned by query"],
     'workqueue': [CheckDocbase.check_work_queue, True, "checks workqueue size"],
     'serverworkqueue': [CheckDocbase.check_server_work_queue, True, "checks server workqueue size"],
