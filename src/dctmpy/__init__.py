@@ -114,6 +114,8 @@ CHARSETS = {
     'MS1257': 41, 'MS1258': 42, 'MS1361': 26, 'MS874': 19, 'MS932': 27, 'MS936': 22, 'MS949': 24, 'MS950': 25,
     'SHIFT-JIS': 4, 'US-ASCII': 1, 'UTF-8': 16, }
 
+CHARSETS_REVERSE = {v: k for k, v in CHARSETS.items()}
+
 PLATFORMS = {
     'WINDOWS': 4096, 'UNIX': 8192, 'RESERVED_1': 0, 'RESERVED_2': 1, 'MS_WINDOWS': 4099, 'MACINTOSH': 16388,
     'SUNOS': 8197, 'SOLARIS': 8198, 'HP_UX': 8199, 'AIX': 8200, 'LINUX': 8201, }
@@ -147,7 +149,6 @@ TYPES = {
     4: TIME,
     5: DOUBLE,
     6: UNDEFINED,
-    7: BOOL,
 }
 
 NULL_ID = "0" * 16

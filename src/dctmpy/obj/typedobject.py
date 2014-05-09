@@ -91,7 +91,9 @@ class TypedObject(object):
 
         if self.serversion == 2:
             repeating = self._next_string(REPEATING_PATTERN) == REPEATING
-            attr_type = TYPES[self._read_int()]
+            entry_type = self._read_int()
+            if entry_type in TYPES:
+                attr_type = TYPES[entry_type]
 
         attr_name = self.type.get(position).name
         attr_length = self.type.get(position).length

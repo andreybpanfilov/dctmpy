@@ -57,6 +57,7 @@ class DocbaseClient(Netwise):
 
         self._connect()
         self._fetch_entry_points()
+        self._set_locale()
 
         if self.password and self.username:
             self.authenticate()
@@ -80,6 +81,20 @@ class DocbaseClient(Netwise):
         if m:
             self.docbaseid = int(m.group(1))
         self.disconnect()
+
+    def _set_locale(self, charset=get_charset_id()):
+        if not charset in CHARSETS_REVERSE:
+            raise RuntimeError("Unknown charset id %s" % charset)
+        try:
+            self.set_locale(charset)
+        except Exception, e:
+            if e.message.startswith('DM_SESSION_E_NO_TRANSLATOR'):
+                if charset == CHARSETS['US-ASCII']:
+                    raise e
+                logging.warning("Unable to set charset %s, falling back to US-ASCII" % CHARSETS_REVERSE[charset])
+                self.set_locale(CHARSETS['US-ASCII'])
+            else:
+                raise e
 
     def disconnect(self):
         try:
@@ -343,6 +358,11 @@ class DocbaseClient(Netwise):
             object_id = NULL_ID
         return self.apply(RPC_APPLY_FOR_ID, object_id, method, request, cls)
 
+    def _as_boolean(self, object_id, method, request=None, cls=None):
+        if not object_id:
+            object_id = NULL_ID
+        return self.apply(RPC_APPLY_FOR_BOOL, object_id, method, request, cls)
+
     def _as_time(self, object_id, method, request=None, cls=None):
         if not object_id:
             object_id = NULL_ID
@@ -403,7 +423,8 @@ class DocbaseClient(Netwise):
         cls = self.__class__
         self._register(Rpc('GET_SERVER_CONFIG', cls._as_object, TypedObject, cls._server_config_request, False))
         self._register(Rpc('GET_DOCBASE_CONFIG', cls._as_object, TypedObject, cls._docbase_config_request, False))
-        self._register(Rpc('ENTRY_POINTS', cls._as_object, EntryPoints, cls._entry_points_request, False))
+        self._register(Rpc('ENTRY_POINTS', cls._as_object, EntryPoints, None, False))
+        self._register(Rpc('SET_LOCALE', cls._as_boolean, TypedObject, cls._locale_request, False))
         self._register(Rpc('FETCH', cls._as_object, Persistent, None, True))
         self._register(Rpc('AUTHENTICATE_USER', cls._as_object, TypedObject, cls._auth_request, False))
         self._register(Rpc('GET_ERRORS', cls._as_collection, Collection, cls._get_errors_request, False))
@@ -421,10 +442,10 @@ class DocbaseClient(Netwise):
         self.knowncommands[command.command] = command
 
     @staticmethod
-    def _entry_points_request(session):
+    def _locale_request(session, charset=get_charset_id()):
         obj = TypedObject(session=session)
         obj.add(AttrValue(name="LANGUAGE", type=INT, values=[get_locale_id()]))
-        obj.add(AttrValue(name="CHARACTER_SET", type=INT, values=[get_charset_id()]))
+        obj.add(AttrValue(name="CHARACTER_SET", type=INT, values=[charset]))
         obj.add(AttrValue(name="PLATFORM_ENUM", type=INT, values=[get_platform_id()]))
         obj.add(AttrValue(name="PLATFORM_VERSION_IMAGE", type=STRING, values=["python"]))
         obj.add(AttrValue(name="UTC_OFFSET", type=INT, values=[get_offset_in_seconds()]))
