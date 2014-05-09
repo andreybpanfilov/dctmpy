@@ -10,7 +10,7 @@ else:
 
 setup(
     name='dctmpy',
-    version='0.1.8',
+    version='0.1.8.1',
     packages=['dctmpy', 'dctmpy.net', 'dctmpy.obj', 'dctmpy.nagios'],
     package_dir={'': 'src'},
     license='ZPL-2.1',
