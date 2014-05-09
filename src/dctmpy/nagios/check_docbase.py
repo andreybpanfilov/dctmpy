@@ -25,9 +25,9 @@ JOB_ATTRIBUTES = ['object_name', 'is_inactive', 'a_last_invocation',
                   'expiration_date', 'max_iterations', 'a_iterations',
                   'a_next_invocation', 'start_date', 'a_current_status']
 
-JOB_QUERY = "SELECT " + ", ".join(JOB_ATTRIBUTES) + " FROM dm_job WHERE 1=1 "
+JOB_QUERY = "SELECT " + ", ".join(JOB_ATTRIBUTES) + " FROM dm_job"
 
-JOB_ACTIVE_CONDITION = " AND ((a_last_invocation IS NOT NULLDATE and a_last_completion IS NULLDATE) " \
+JOB_ACTIVE_CONDITION = "((a_last_invocation IS NOT NULLDATE and a_last_completion IS NULLDATE) " \
                        " OR a_special_app = 'agentexec')" \
                        " AND (i_is_reference = 0 OR i_is_reference is NULL)" \
                        " AND (i_is_replica = 0 OR i_is_replica is NULL)"
@@ -570,9 +570,14 @@ class CheckDocbase(Resource):
 
     @staticmethod
     def get_jobs(session, jobs=None, condition=""):
-        query = JOB_QUERY + condition
-        if jobs:
-            query += " AND object_name IN ('" + "','".join(jobs) + "')"
+        query = JOB_QUERY
+        if CheckDocbase.is_empty(condition):
+            if jobs:
+                query += " WHERE object_name IN ('" + "','".join(jobs) + "')"
+        else:
+            query += " WHERE (%s)" % condition
+            if jobs:
+                query += " AND object_name IN ('" + "','".join(jobs) + "')"
         return CheckDocbase.read_query(session, query)
 
     @staticmethod
@@ -585,7 +590,7 @@ class CheckDocbase(Resource):
                 " FROM dmi_queue_item que, dmi_workitem wi, dmi_package pkg" \
                 " WHERE que.event = 'dm_changedactivityinstancestate'" \
                 " AND que.item_id LIKE '4a%%'" \
-                " AND que.MESSAGE LIKE 'Activity instance, %%, of workflow, %%, failed.'" \
+                " AND que.message LIKE 'Activity instance, %%, of workflow, %%, failed.'" \
                 " AND que.item_id = wi.r_object_id" \
                 " AND wi.r_workflow_id = pkg.r_workflow_id" \
                 " AND wi.r_act_seqno = pkg.r_act_seqno" \
