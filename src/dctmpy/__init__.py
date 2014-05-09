@@ -125,7 +125,7 @@ REPEATING_PATTERN = '^(R|S)$'
 BASE64_PATTERN = '^[0-9a-zA-Z+/?]+?$'
 INTEGER_PATTERN = '^-?\d+$'
 ENCODING_PATTERN = '^(A|H)$'
-BOOLEAN_PATTERN = '^(T|F)$'
+BOOLEAN_PATTERN = '^(T|F|1|0)$'
 CRLF_PATTERN = '\r?\n'
 
 SINGLE = "S"
@@ -146,6 +146,8 @@ TYPES = {
     3: ID,
     4: TIME,
     5: DOUBLE,
+    6: UNDEFINED,
+    7: BOOL,
 }
 
 NULL_ID = "0" * 16

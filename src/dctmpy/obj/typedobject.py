@@ -256,7 +256,8 @@ class TypedObject(object):
         return parse_time(value)
 
     def _read_boolean(self):
-        return self._next_string(BOOLEAN_PATTERN) == 'T'
+        value = self._next_string(BOOLEAN_PATTERN)
+        return value == 'T' or value == '1'
 
     def __getattr__(self, name):
         if name in self.__attrs:
