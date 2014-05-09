@@ -2,6 +2,7 @@
 #
 #  See main module for license.
 #
+from decimal import Decimal
 
 from dctmpy import *
 
@@ -155,7 +156,7 @@ class TypedObject(object):
             TIME: lambda: self._read_time(),
             BOOL: lambda: self._read_boolean(),
             ID: lambda: self._next_string(),
-            DOUBLE: lambda: self._next_string(),
+            DOUBLE: lambda: self._read_double(),
             UNDEFINED: lambda: self._next_string()
         }[attr_type]()
 
@@ -260,6 +261,9 @@ class TypedObject(object):
     def _read_boolean(self):
         value = self._next_string(BOOLEAN_PATTERN)
         return value == 'T' or value == '1'
+
+    def _read_double(self):
+        return Decimal(self._next_string())
 
     def __getattr__(self, name):
         if name in self.__attrs:
