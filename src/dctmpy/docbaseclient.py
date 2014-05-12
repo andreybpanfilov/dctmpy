@@ -16,6 +16,8 @@ NETWISE_VERSION = 3
 NETWISE_RELEASE = 5
 NETWISE_INUMBER = 769
 
+DEFAULT_CHARSET = 'UTF-8'
+
 
 class DocbaseClient(Netwise):
     attributes = ['docbaseid', 'username', 'password', 'messages', 'entrypoints', 'serversion', 'iso8601time',
@@ -82,17 +84,18 @@ class DocbaseClient(Netwise):
             self.docbaseid = int(m.group(1))
         self.disconnect()
 
-    def _set_locale(self, charset=get_charset_id()):
+    def _set_locale(self, charset=CHARSETS[DEFAULT_CHARSET]):
         if not charset in CHARSETS_REVERSE:
             raise RuntimeError("Unknown charset id %s" % charset)
         try:
             self.set_locale(charset)
         except Exception, e:
             if e.message.startswith('DM_SESSION_E_NO_TRANSLATOR'):
-                if charset == CHARSETS['US-ASCII']:
+                if charset == CHARSETS[DEFAULT_CHARSET]:
                     raise e
-                logging.warning("Unable to set charset %s, falling back to US-ASCII" % CHARSETS_REVERSE[charset])
-                self.set_locale(CHARSETS['US-ASCII'])
+                logging.warning("Unable to set charset %s, falling back to %s"
+                                % (CHARSETS_REVERSE[charset], DEFAULT_CHARSET))
+                self.set_locale(CHARSETS[DEFAULT_CHARSET])
             else:
                 raise e
 
@@ -435,6 +438,7 @@ class DocbaseClient(Netwise):
         self._register(Rpc('EXEC_SELECT_SQL', cls._as_collection, Collection, cls._sql_query_request, False))
         self._register(Rpc('FTINDEX_AGENT_ADMIN', cls._as_object, TypedObject, cls._index_agent_status_request, False))
         self._register(Rpc('DUMP_JMS_CONFIG_LIST', cls._as_object, TypedObject, None, False))
+        self._register(Rpc('GET_LOGIN', cls._as_string, TypedObject, cls._login_ticket_request, False))
 
     def _register(self, command):
         if not self.knowncommands:
@@ -533,6 +537,20 @@ class DocbaseClient(Netwise):
         obj.add(AttrValue(name="NAME", type=STRING, values=[indexname]))
         obj.add(AttrValue(name="AGENT_INSTANCE_NAME", type=STRING, values=[agentname]))
         obj.add(AttrValue(name="ACTION", type=STRING, values=["status"]))
+        return obj
+
+    @staticmethod
+    def _login_ticket_request(session, username=None, scope="global", servername=None, timeout=300, singleuse=False):
+        obj = TypedObject(session=session)
+        if username:
+            obj.add(AttrValue(name="OPTIONAL_USER_NAME", type=STRING, values=[username]))
+        if scope:
+            obj.add(AttrValue(name="LOGIN_TICKET_SCOPE", type=STRING, values=[scope]))
+        if servername:
+            obj.add(AttrValue(name="SERVER_NAME", type=STRING, values=[servername]))
+        if timeout > 0:
+            obj.add(AttrValue(name="LOGIN_TICKET_TIMEOUT", type=INT, values=[timeout]))
+        obj.add(AttrValue(name="SINGLE_USE", type=BOOL, values=[singleuse]))
         return obj
 
     @staticmethod

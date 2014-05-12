@@ -248,6 +248,7 @@ def get_charset_id():
     (system, release, version) = platform.system_alias(platform.system(), platform.release(), platform.version())
     data = re.split("_|\.|@?", locale.setlocale(locale.LC_ALL, ''))
     data[2] = data[2].replace("_", "-").upper()
+    data[2] = data[2].replace("UTF8", "UTF-8")
     if data[2] in CHARSETS:
         return CHARSETS[data[2]]
     elif (re.match("windows", system, re.I)

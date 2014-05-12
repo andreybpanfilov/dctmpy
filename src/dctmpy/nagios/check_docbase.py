@@ -9,6 +9,13 @@ try:
 except ImportError:
     from urllib2 import urlopen, URLError
 
+try:
+    from urllib import urlencode
+except ImportError:
+    urlencode = None
+
+from xml.dom import minidom
+
 from nagiosplugin import Metric, Result, Summary, Check, Resource, guarded, ScalarResult, ScalarContext
 from nagiosplugin.state import Critical, Warn, Ok, Unknown
 
@@ -38,6 +45,11 @@ JOB_INTERVALS = {
     3: 24 * 60 * 60,
     4: 7 * 24 * 60 * 60
 }
+
+CTS_ATTRIBUTES = ['r_object_id', 'object_name', 'cts_version', 'agent_url',
+                  'hostname', 'status', 'websrv_url', 'inst_type']
+
+CTS_QUERY = "SELECT " + ", ".join(CTS_ATTRIBUTES) + " FROM cts_instance_info"
 
 APP_SERVER_RESPONSES = {
     'do_method': 'Documentum Java Method Server',
@@ -419,6 +431,16 @@ class CheckDocbase(Resource):
             message = "Unable to execute query: %s" % str(e)
             self.add_result(Critical, message)
 
+    def check_cts_queue(self):
+        query = "SELECT count(r_object_id) AS queue_size " \
+                "FROM dmi_queue_item WHERE name='dm_mediaserver' AND delete_flag=FALSE"
+        try:
+            result = CheckDocbase.read_object(self.session, query)
+            yield CustomMetric("dm_mediaserver", int(result['queue_size']), min=0, context=THRESHOLDS)
+        except Exception, e:
+            message = "Unable to execute query: %s" % str(e)
+            self.add_result(Critical, message)
+
     def check_failed_tasks(self):
         try:
             count = 0
@@ -478,13 +500,69 @@ class CheckDocbase(Resource):
                          r'\1' + serverconfig['r_host_name'] + r'\4', url)
             self.check_app_server(name, url)
 
+    def check_cts_status(self):
+        try:
+            for cts in CheckDocbase.get_cts_instances(self.session):
+                self.check_cts(cts)
+        except Exception, e:
+            message = "Unable to execute query: %s" % str(e)
+            self.add_result(Critical, message)
+            return
+
+    def check_cts(self, cts):
+        try:
+            ticket = self.session.get_login()
+        except Exception, e:
+            message = "Unable to create login ticket: %s" % str(e)
+            self.add_result(Critical, message)
+            return
+
+        data = {
+            'docbase': self.session.docbaseconfig['object_name'],
+            'userid': self.session.username,
+            'ticket': ticket,
+            'instanceid': cts['r_object_id'],
+            'command': 'GET_STATUS',
+        }
+
+        url = cts['agent_url']
+        instance_name = cts['object_name']
+        try:
+            if urlencode:
+                response = urlopen(url, data=urlencode(data), timeout=APP_SERVER_TIMEOUT)
+            else:
+                response = urlopen(url, data=data, timeout=APP_SERVER_TIMEOUT)
+            if response.code != 200:
+                message = "Unable to open %s (instance: %s): response code %d" % (url, instance_name, response.code)
+                self.add_result(Critical, message)
+                return
+
+            try:
+                xmldoc = minidom.parseString(response.read())
+                status = xmldoc.getElementsByTagName("message-id")[0].firstChild.nodeValue
+                message = "CTS Agent for instance \"%s\" has status \"%s\"" % (instance_name, status)
+                if status != "RUNNING":
+                    self.add_result(Critical, message)
+                else:
+                    self.add_result(Ok, message)
+            except Exception, e:
+                message = "Unable to parse xml response (instance: %s): %s" % (instance_name, str(e))
+                self.add_result(Critical, message)
+
+        except URLError, e:
+            message = "Unable to open %s (instance: %s): %s" % (url, instance_name, e.reason)
+            self.add_result(Critical, message)
+        except Exception, e:
+            message = "Unable to open %s (instance: %s): %s" % (url, instance_name, str(e))
+            self.add_result(Critical, message)
+
     def check_app_server(self, name, url):
         if name not in APP_SERVER_RESPONSES:
             return
         try:
             response = urlopen(url, timeout=APP_SERVER_TIMEOUT)
             if response.code != 200:
-                message = "unable to open %s: response code %d" % (url, response.code)
+                message = "Unable to open %s: response code %d" % (url, response.code)
                 self.add_result(Critical, message)
                 return
 
@@ -498,10 +576,10 @@ class CheckDocbase(Resource):
             self.add_result(Ok, message)
 
         except URLError, e:
-            message = "unable to open %s: %s" % (url, e.reason)
+            message = "Unable to open %s: %s" % (url, e.reason)
             self.add_result(Critical, message)
         except Exception, e:
-            message = "unable to open %s: %s" % (url, str(e))
+            message = "Unable to open %s: %s" % (url, str(e))
             self.add_result(Critical, message)
 
     def check_login(self):
@@ -578,6 +656,18 @@ class CheckDocbase(Resource):
             query += " WHERE (%s)" % condition
             if jobs:
                 query += " AND object_name IN ('" + "','".join(jobs) + "')"
+        return CheckDocbase.read_query(session, query)
+
+    @staticmethod
+    def get_cts_instances(session, cts_names=None, condition=""):
+        query = CTS_QUERY
+        if CheckDocbase.is_empty(condition):
+            if cts_names:
+                query += " WHERE object_name IN ('" + "','".join(cts_names) + "')"
+        else:
+            query += " WHERE (%s)" % condition
+            if cts_names:
+                query += " AND object_name IN ('" + "','".join(cts_names) + "')"
         return CheckDocbase.read_query(session, query)
 
     @staticmethod
@@ -686,9 +776,11 @@ modes = {
     'workqueue': [CheckDocbase.check_work_queue, True, "checks workqueue size"],
     'serverworkqueue': [CheckDocbase.check_server_work_queue, True, "checks server workqueue size"],
     'indexqueue': [CheckDocbase.check_fulltext_queue, True, "checks index agent queue size"],
+    'ctsqueue': [CheckDocbase.check_cts_queue, True, "checks CTS agent queue size"],
     'failedtasks': [CheckDocbase.check_failed_tasks, True, "checks failed tasks"],
     'login': [CheckDocbase.check_login, False, "checks login"],
-    'jmsstatus': [CheckDocbase.check_jms_status, False, "checks jms status"],
+    'jmsstatus': [CheckDocbase.check_jms_status, False, "checks JMS status"],
+    'ctsstatus': [CheckDocbase.check_cts_status, False, "checks CTS status"],
 }
 
 
