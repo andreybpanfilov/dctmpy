@@ -12,7 +12,7 @@ class Collection(TypedObject):
 
     def __init__(self, **kwargs):
         for attribute in Collection.attributes:
-            self.__setattr__(ATTRIBUTE_PREFIX + attribute, kwargs.pop(attribute, None))
+            setattr(self, attribute, kwargs.pop(attribute, None))
         super(Collection, self).__init__(**kwargs)
 
     def _need_read_type(self):
@@ -25,15 +25,15 @@ class Collection(TypedObject):
         if self.collection is None:
             return None
 
-        if isempty(self.buffer) and (self.maybemore is None or self.maybemore):
+        if is_empty(self.buffer) and (self.maybemore is None or self.maybemore):
             response = self.session.next_batch(self.collection, self.batchsize)
             self.buffer = response.data
             self.records = response.records
             self.maybemore = response.maybemore
-            if self.serversion > 0 and not isempty(self.buffer):
+            if self.serversion > 0 and not is_empty(self.buffer):
                 self._read_int()
 
-        if not isempty(self.buffer) and (self.records is None or self.records > 0):
+        if not is_empty(self.buffer) and (self.records is None or self.records > 0):
             try:
                 cls = [CollectionEntry, PersistentCollectionEntry][self.persistent]
                 entry = cls(session=self.session, type=self.type, buffer=self.buffer)
@@ -94,9 +94,9 @@ class PersistentCollection(Collection):
         super(PersistentCollection, self).__init__(**kwargs)
 
     def _read(self, buf=None):
-        if isempty(buf) and isempty(self.buffer):
+        if is_empty(buf) and is_empty(self.buffer):
             raise ParserException("Empty data")
-        if not isempty(buf):
+        if not is_empty(buf):
             self.buffer = buf
         self.type = self.session.get_type(self._next_string(), 0)
 

@@ -19,7 +19,7 @@ class TypeObject(TypedObject):
             for i in xrange(0, self.__type_count):
                 type_info = self._deserialize_child_type()
         else:
-            while not isempty(self.buffer()):
+            while not is_empty(self.buffer()):
                 type_info = self._deserialize_child_type()
         self.type = type_info
 

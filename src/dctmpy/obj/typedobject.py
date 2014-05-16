@@ -12,7 +12,7 @@ class TypedObject(object):
 
     def __init__(self, **kwargs):
         for attribute in TypedObject.attributes:
-            self.__setattr__(ATTRIBUTE_PREFIX + attribute, kwargs.pop(attribute, None))
+            setattr(self, attribute, kwargs.pop(attribute, None))
         self.__attrs = {}
 
         if self.serversion is None:
@@ -24,13 +24,13 @@ class TypedObject(object):
             else:
                 self.iso8601time = False
 
-        if not isempty(self.buffer):
+        if not is_empty(self.buffer):
             self._read()
 
     def _read(self, buf=None):
-        if isempty(buf) and isempty(self.buffer):
+        if is_empty(buf) and is_empty(self.buffer):
             raise ParserException("Empty data")
-        elif not isempty(buf):
+        elif not is_empty(buf):
             self.buffer = buf
 
         self._read_header()
@@ -130,7 +130,7 @@ class TypedObject(object):
             repeating = REPEATING == self._next_string()
             length = self._read_int()
 
-            if isempty(attr_type):
+            if is_empty(attr_type):
                 raise ParserException("Unknown typedef: %s" % attr_type)
 
             result = []

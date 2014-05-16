@@ -14,7 +14,7 @@ class Netwise(object):
 
     def __init__(self, **kwargs):
         for attribute in Netwise.attributes:
-            self.__setattr__(ATTRIBUTE_PREFIX + attribute, kwargs.pop(attribute, None))
+            setattr(self, attribute, kwargs.pop(attribute, None))
         if self.sockopts is None:
             self.sockopts = kwargs
         if self.sequence is None:

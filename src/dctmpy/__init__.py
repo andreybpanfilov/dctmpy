@@ -289,7 +289,7 @@ def integer_array_to_string(data):
     return b.tostring()
 
 
-def isempty(value):
+def is_empty(value):
     if value is None:
         return True
     if isinstance(value, str):
@@ -313,7 +313,7 @@ def isempty(value):
 
 
 def parse_address(value):
-    if isempty(value):
+    if is_empty(value):
         raise ParserException("Invalid address: %s" % value)
     if not value.startswith("INET_ADDR"):
         raise ParserException("Invalid address: %s" % value)
@@ -322,7 +322,7 @@ def parse_address(value):
 
 
 def parse_time(value):
-    if isempty(value) or "nulldate" == value:
+    if is_empty(value) or "nulldate" == value:
         return None
     if re.match(ISO8601_REGEXP, value):
         chunks = re.split("[-:TZ]", value)
@@ -413,7 +413,7 @@ class AttrInfo(object):
 
     def __init__(self, **kwargs):
         for attribute in AttrInfo.attributes:
-            self.__setattr__(ATTRIBUTE_PREFIX + attribute, kwargs.pop(attribute, None))
+            setattr(self, attribute, kwargs.pop(attribute, None))
 
     def clone(self):
         return AttrInfo(**dict((x, self.__getattr__(x)) for x in AttrInfo.attributes))
@@ -436,7 +436,7 @@ class AttrValue(object):
 
     def __init__(self, **kwargs):
         for attribute in AttrValue.attributes:
-            self.__setattr__(ATTRIBUTE_PREFIX + attribute, kwargs.pop(attribute, None))
+            setattr(self, attribute, kwargs.pop(attribute, None))
         if self.values is None:
             self.values = []
         if not isinstance(self.values, list):
@@ -505,19 +505,19 @@ class AttrValue(object):
 
 class TypeInfo(object):
     attributes = ['name', 'id', 'vstamp', 'version', 'cache', 'super', 'sharedparent', 'aspectname', 'aspectshareflag',
-                  'serversion']
+                  'serversion', 'attrs', 'positions']
 
     def __init__(self, **kwargs):
         for attribute in TypeInfo.attributes:
-            self.__setattr__(ATTRIBUTE_PREFIX + attribute, kwargs.pop(attribute, None))
-        self.__attrs = []
-        self.__positions = {}
+            setattr(self, ATTRIBUTE_PREFIX + attribute, kwargs.pop(attribute, None))
+        self.attrs = []
+        self.positions = {}
 
     def __getattr__(self, name):
         if name in TypeInfo.attributes:
             return self.__getattribute__(ATTRIBUTE_PREFIX + name)
         elif name == "attributes":
-            return self.__attrs
+            return self.attrs
         else:
             raise AttributeError("Unknown attribute %s in %s" % (name, str(self.__class__)))
 
@@ -528,32 +528,32 @@ class TypeInfo(object):
             super(TypeInfo, self).__setattr__(name, value)
 
     def append(self, attrInfo):
-        self.__attrs.append(attrInfo)
+        self.attrs.append(attrInfo)
         if self.serversion > 0:
             if attrInfo.position > -1:
-                self.__positions[attrInfo.position] = attrInfo
+                self.positions[attrInfo.position] = attrInfo
             elif self.name != "GeneratedType":
                 raise RuntimeError("Empty position")
 
     def insert(self, index, attrInfo):
-        self.__attrs.insert(index, attrInfo)
+        self.attrs.insert(index, attrInfo)
         if self.serversion > 0:
             if attrInfo.position > -1:
-                self.__positions[attrInfo.position] = attrInfo
+                self.positions[attrInfo.position] = attrInfo
             elif self.name != "GeneratedType":
                 raise RuntimeError("Empty position")
 
     def get(self, index):
         if self.serversion > 0:
             if self.name != "GeneratedType":
-                return self.__positions[index]
-        return self.__attrs[index]
+                return self.positions[index]
+        return self.attrs[index]
 
     def count(self):
-        return len(self.__attrs)
+        return len(self.attrs)
 
-    def extend(self, type_info):
-        if self.super == type_info.name:
-            for i in type_info.__attrs[::-1]:
+    def extend(self, other):
+        if self.super == other.name:
+            for i in other.attrs[::-1]:
                 self.insert(0, i.clone())
-            self.super = type_info.super
+            self.super = other.super

@@ -23,7 +23,7 @@ class DocbrokerObject(TypedObject):
             raise ParserException("Invalid header, expected OBJ, got: %s" % header)
 
         type_name = self._next_token()
-        if isempty(type_name):
+        if is_empty(type_name):
             raise ParserException("Wrong type name")
 
         self._read_int()

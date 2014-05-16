@@ -14,7 +14,7 @@ class Request(object):
 
     def __init__(self, **kwargs):
         for attribute in Request.attributes:
-            self.__setattr__(ATTRIBUTE_PREFIX + attribute, kwargs.pop(attribute, None))
+            setattr(self, attribute, kwargs.pop(attribute, None))
 
         if self.version is None or self.release is None or self.inumber is None:
             raise ProtocolException("Wrong protocol version info")
