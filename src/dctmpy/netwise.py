@@ -4,6 +4,7 @@
 #
 
 import socket
+import ssl
 
 from dctmpy import *
 from dctmpy.net.request import Request
@@ -31,9 +32,12 @@ class Netwise(object):
             try:
                 host = self.sockopts.get('host', None)
                 port = self.sockopts.get('port', None)
+                secure = self.sockopts.get('secure', False)
                 if not host or not (port > -1):
                     raise RuntimeError("Invalid host or port")
                 self.__socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                if secure:
+                    self.__socket = ssl.wrap_socket(self.__socket)
                 self.__socket.connect((host, port))
             except:
                 self.__socket = None

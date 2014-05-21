@@ -54,7 +54,9 @@ CTS_QUERY = "SELECT " + ", ".join(CTS_ATTRIBUTES) + " FROM cts_instance_info"
 APP_SERVER_RESPONSES = {
     'do_method': 'Documentum Java Method Server',
     'do_mail': 'Documentum Mail Servlet',
-    'do_bpm': 'Documentum Java Method Server'
+    'do_bpm': 'Documentum Java Method Server',
+    'acs': 'ACS Server Is Running',
+    'dsearch': 'The xPlore instance',
 }
 
 APP_SERVER_TIMEOUT = 5
@@ -406,10 +408,10 @@ class CheckDocbase(Resource):
             self.add_result(Critical, message)
 
     def check_fulltext_queue(self):
+        query = "select distinct queue_user from dm_ftindex_agent_config"
         try:
             count = 0
-            for user in CheckDocbase.read_query(self.session,
-                                                "select distinct queue_user from dm_ftindex_agent_config"):
+            for user in CheckDocbase.read_query(self.session, query):
                 count += 1
                 result = self.check_fulltext_queue_for_user(user['queue_user'])
                 if result:
@@ -496,14 +498,40 @@ class CheckDocbase(Resource):
         for i in xrange(0, len(serverconfig['app_server_name'])):
             name = serverconfig['app_server_name'][i]
             url = serverconfig['app_server_uri'][i]
-            url = re.sub(r'(https?://)(localhost(\.localdomain)?|127\.0\.0\.1)([:/])?',
-                         r'\1' + serverconfig['r_host_name'] + r'\4', url)
             self.check_app_server(name, url)
+
+    def check_acs_status(self):
+        try:
+            count = 0
+            for rec in CheckDocbase.get_acs_configs(self.session):
+                count += 1
+                try:
+                    acs = self.session.fetch(rec['r_object_id'])
+                    for url in acs['acs_base_url']:
+                        self.check_app_server('acs', url)
+                except Exception, rec:
+                    message = "Unable to retrieve acs config %s: %s" % (rec['r_object_id'], str(rec))
+                    self.add_result(Critical, message)
+            if count == 0:
+                message = "No ACS instances"
+                self.add_result(Warn, message)
+        except Exception, rec:
+            message = "Unable to execute query: %s" % str(rec)
+            self.add_result(Critical, message)
+            return
+
+    def check_xplore_status(self):
+        ''
 
     def check_cts_status(self):
         try:
+            count = 0
             for cts in CheckDocbase.get_cts_instances(self.session):
+                count += 1
                 self.check_cts(cts)
+            if count == 0:
+                message = "No CTS instances"
+                self.add_result(Warn, message)
         except Exception, e:
             message = "Unable to execute query: %s" % str(e)
             self.add_result(Critical, message)
@@ -560,6 +588,9 @@ class CheckDocbase(Resource):
         if name not in APP_SERVER_RESPONSES:
             return
         try:
+            serverconfig = self.session.serverconfig
+            url = re.sub(r'(https?://)(localhost(\.localdomain)?|127\.0\.0\.1)([:/])?',
+                         r'\1' + serverconfig['r_host_name'] + r'\4', url)
             response = urlopen(url, timeout=APP_SERVER_TIMEOUT)
             if response.code != 200:
                 message = "Unable to open %s: response code %d" % (url, response.code)
@@ -615,6 +646,17 @@ class CheckDocbase(Resource):
             return getattr(self.args, name)
         else:
             return AttributeError("Unknown attribute %s in %s" % (name, str(self.__class__)))
+
+    @staticmethod
+    def get_acs_configs(session):
+        serverconfig = session.serverconfig
+        query = "SELECT r_object_id FROM dm_acs_config" \
+                " WHERE svr_config_id='%s'" % serverconfig['r_object_id']
+        return CheckDocbase.read_query(session, query)
+
+    @staticmethod
+    def get_xplore_configs(session):
+        ''
 
     @staticmethod
     def get_indexes(session):
@@ -781,6 +823,8 @@ modes = {
     'login': [CheckDocbase.check_login, False, "checks login"],
     'jmsstatus': [CheckDocbase.check_jms_status, False, "checks JMS status"],
     'ctsstatus': [CheckDocbase.check_cts_status, False, "checks CTS status"],
+    'acsstatus': [CheckDocbase.check_acs_status, False, "checks ACS"],
+    'xplorestatus': [CheckDocbase.check_xplore_status, False, "checks xPlore"],
 }
 
 
@@ -792,6 +836,8 @@ def main():
     argp.add_argument('-i', '--docbaseid', required=False, metavar='docbaseid', type=int, help='docbase identifier')
     argp.add_argument('-l', '--login', metavar='username', help='username')
     argp.add_argument('-a', '--authentication', metavar='password', help='password')
+    #todo add ssl support
+    #argp.add_argument('-s', '--secure', action='store_true', help='use ssl')
     argp.add_argument('-t', '--timeout', metavar='timeout', default=60, type=int,
                       help='check timeout, default is 60 seconds')
     argp.add_argument('-m', '--mode', required=True, metavar='mode',
@@ -804,18 +850,21 @@ def main():
     argp.add_argument('-c', '--critical', metavar='RANGE', help='critical threshold')
     args = argp.parse_args()
 
-    m = re.match('^(dctm://((.*?)(:(.*))?@)?)?([^/:]+?)(:(\d+))?(/(\d+))?$', args.host)
+    m = re.match('^(dctm(s)?://((.*?)(:(.*))?@)?)?([^/:]+?)(:(\d+))?(/(\d+))?$', args.host)
     if m:
-        if m.group(3):
-            setattr(args, 'login', m.group(3))
-        if m.group(5):
-            setattr(args, 'authentication', m.group(5))
+        if m.group(2):
+            #setattr(args, 'secure', m.group(2))
+            pass
+        if m.group(4):
+            setattr(args, 'login', m.group(4))
         if m.group(6):
-            setattr(args, 'host', m.group(6))
-        if m.group(8) is not None:
-            setattr(args, 'port', int(m.group(8)))
-        if m.group(10) is not None:
-            setattr(args, 'docbaseid', int(m.group(10)))
+            setattr(args, 'authentication', m.group(6))
+        if m.group(7):
+            setattr(args, 'host', m.group(7))
+        if m.group(9) is not None:
+            setattr(args, 'port', int(m.group(9)))
+        if m.group(11) is not None:
+            setattr(args, 'docbaseid', int(m.group(11)))
 
     if args.login and not args.authentication:
         m = re.match('^(.*?):(.*)$', args.login)

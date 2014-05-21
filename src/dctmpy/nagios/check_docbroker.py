@@ -69,7 +69,7 @@ class CheckDocbroker(Resource):
                             self.add_result(Ok, message)
                     continue
                 except Exception, e:
-                    message = "Failed to retrieve servermap for %s:" % (docbase, str(e))
+                    message = "Failed to retrieve servermap for docbase %s: %s" % (docbase, str(e))
                     self.add_result(Critical, message)
                     continue
 
