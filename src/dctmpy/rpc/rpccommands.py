@@ -31,13 +31,13 @@ class Rpc(object):
         else:
             super(Rpc, self).__setattr__(name, value)
 
-    @classmethod
+    @staticmethod
     def as_object(session, object_id, method, request=None, cls=TypedObject):
         if not object_id:
             object_id = NULL_ID
         return session.apply(RPC_APPLY_FOR_OBJECT, object_id, method, request, cls)
 
-    @classmethod
+    @staticmethod
     def as_collection(session, object_id, method, request=None, cls=Collection):
         if not object_id:
             object_id = NULL_ID
