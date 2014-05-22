@@ -509,19 +509,42 @@ class CheckDocbase(Resource):
                     acs = self.session.fetch(rec['r_object_id'])
                     for url in acs['acs_base_url']:
                         self.check_app_server('acs', url)
-                except Exception, rec:
-                    message = "Unable to retrieve acs config %s: %s" % (rec['r_object_id'], str(rec))
+                except Exception, e:
+                    message = "Unable to retrieve acs config %s: %s" % (rec['r_object_id'], str(e))
                     self.add_result(Critical, message)
             if count == 0:
                 message = "No ACS instances"
                 self.add_result(Warn, message)
-        except Exception, rec:
-            message = "Unable to execute query: %s" % str(rec)
+        except Exception, e:
+            message = "Unable to execute query: %s" % str(e)
             self.add_result(Critical, message)
             return
 
     def check_xplore_status(self):
-        ''
+        try:
+            count = 0
+            for rec in CheckDocbase.get_xplore_configs(self.session):
+                count += 1
+                try:
+                    xplore = self.session.fetch(rec['r_object_id'])
+                    prop = dict(zip(xplore['param_name'], xplore['param_value']))
+                    url = "%s://%s:%s%s" % (
+                        prop['dsearch_qrserver_protocol'].lower(),
+                        prop['dsearch_qrserver_host'],
+                        prop['dsearch_qrserver_port'],
+                        prop['dsearch_qrserver_target']
+                    )
+                    self.check_app_server('dsearch', url)
+                except Exception, e:
+                    message = "Unable to retrieve ft_engine config %s: %s" % (rec['r_object_id'], str(e))
+                    self.add_result(Critical, message)
+            if count == 0:
+                message = "No xPlore instances"
+                self.add_result(Warn, message)
+        except Exception, e:
+            message = "Unable to execute query: %s" % str(e)
+            self.add_result(Critical, message)
+            return
 
     def check_cts_status(self):
         try:
@@ -592,7 +615,7 @@ class CheckDocbase(Resource):
             url = re.sub(r'(https?://)(localhost(\.localdomain)?|127\.0\.0\.1)([:/])?',
                          r'\1' + serverconfig['r_host_name'] + r'\4', url)
             response = urlopen(url, timeout=APP_SERVER_TIMEOUT)
-            if response.code != 200:
+            if not (response.code >= 200 and response < 300):
                 message = "Unable to open %s: response code %d" % (url, response.code)
                 self.add_result(Critical, message)
                 return
@@ -656,7 +679,8 @@ class CheckDocbase(Resource):
 
     @staticmethod
     def get_xplore_configs(session):
-        ''
+        query = "SELECT ft_engine_id as r_object_id FROM dm_fulltext_index WHERE install_loc='dsearch'"
+        return CheckDocbase.read_query(session, query)
 
     @staticmethod
     def get_indexes(session):
