@@ -26,7 +26,7 @@ class PersistentProxy(TypedObject):
 
 class Persistent(PersistentProxy):
     def __init__(self, **kwargs):
-        super(PersistentProxy, self).__init__(**kwargs)
+        super(Persistent, self).__init__(**kwargs)
 
     def object_id(self):
         return self[R_OBJECT_ID]

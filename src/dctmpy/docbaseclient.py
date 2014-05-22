@@ -256,7 +256,9 @@ class DocbaseClient(Netwise):
                 continue
             if len(message) > 0:
                 message += ", "
-            message += "%s: %s" % (self.messages[i]['NAME'], self.messages[i]['1'])
+            message += self.messages[i]['NAME']
+            if '1' in self.messages[i]:
+                message += ": %s" % self.messages[i]['1']
 
         for i in xrange(len(self.messages) - 1, 1):
             if self.messages[i]['SEVERITY'] >= severity:
@@ -368,9 +370,11 @@ class DocbaseClient(Netwise):
             command = self.knowncommands[name]
             method = command.method
             cls = command.returntype
-            request = command.request
+            request = getattr(Rpc, pep_name, None)
             needid = command.needid
-            argc = command.argcnt
+            argc = 0
+            if request:
+                argc = request.func_code.co_argcount
             if needid:
                 def inner(self, object_id=NULL_ID, *args):
                     if not request:
@@ -389,7 +393,7 @@ class DocbaseClient(Netwise):
                         return method(self, NULL_ID, name, request(self, *args), cls)
         else:
             def inner(self, object_id=NULL_ID, request=None, cls=Collection):
-                return self._as_collection(object_id, name, request, cls)
+                return Rpc.as_collection(self, object_id, name, request, cls)
 
         inner.__name__ = pep_name
         setattr(self.__class__, inner.__name__, inner)

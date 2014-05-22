@@ -11,18 +11,13 @@ from dctmpy import *
 
 
 class Rpc(object):
-    attributes = ['command', 'method', 'returntype', 'request', 'needid', 'argcnt']
+    attributes = ['command', 'method', 'returntype', 'needid']
 
-    def __init__(self, command, method, returntype, request, needid):
+    def __init__(self, command, method, returntype, needid):
         self.command = command
         self.method = method
         self.returntype = returntype
-        self.request = request
         self.needid = needid
-        if self.request:
-            self.argcnt = self.request.func_code.co_argcount
-        else:
-            self.argcnt = 0
 
     def __getattr__(self, name):
         if name in Rpc.attributes:
@@ -36,13 +31,13 @@ class Rpc(object):
         else:
             super(Rpc, self).__setattr__(name, value)
 
-    @staticmethod
+    @classmethod
     def as_object(session, object_id, method, request=None, cls=TypedObject):
         if not object_id:
             object_id = NULL_ID
         return session.apply(RPC_APPLY_FOR_OBJECT, object_id, method, request, cls)
 
-    @staticmethod
+    @classmethod
     def as_collection(session, object_id, method, request=None, cls=Collection):
         if not object_id:
             object_id = NULL_ID
@@ -79,28 +74,27 @@ class Rpc(object):
 
     @staticmethod
     def register_known_commands(session):
-        Rpc._register(session, Rpc('GET_SERVER_CONFIG', Rpc.as_object, TypedObject, Rpc._server_config_request, False))
-        Rpc._register(session,
-                      Rpc('GET_DOCBASE_CONFIG', Rpc.as_object, TypedObject, Rpc._docbase_config_request, False))
-        Rpc._register(session, Rpc('ENTRY_POINTS', Rpc.as_object, EntryPoints, None, False))
-        Rpc._register(session, Rpc('SET_LOCALE', Rpc.as_boolean, TypedObject, Rpc._locale_request, False))
-        Rpc._register(session, Rpc('FETCH', Rpc.as_object, PersistentProxy, None, True))
-        Rpc._register(session, Rpc('AUTHENTICATE_USER', Rpc.as_object, TypedObject, Rpc._auth_request, False))
-        Rpc._register(session, Rpc('GET_ERRORS', Rpc.as_collection, Collection, Rpc._get_errors_request, False))
-        Rpc._register(session, Rpc('FETCH_TYPE', Rpc.as_object, TypedObject, Rpc._fetch_type_request, False))
-        Rpc._register(session, Rpc('EXEC', Rpc.as_collection, Collection, Rpc._query_request, False))
-        Rpc._register(session, Rpc('TIME', Rpc.as_time, TypedObject, None, False))
-        Rpc._register(session, Rpc('COUNT_SESSIONS', Rpc.as_object, TypedObject, None, False))
-        Rpc._register(session, Rpc('EXEC_SELECT_SQL', Rpc.as_collection, Collection, Rpc._sql_query_request, False))
-        Rpc._register(session,
-                      Rpc('FTINDEX_AGENT_ADMIN', Rpc.as_object, TypedObject, Rpc._index_agent_status_request, False))
-        Rpc._register(session, Rpc('DUMP_JMS_CONFIG_LIST', Rpc.as_object, TypedObject, None, False))
-        Rpc._register(session, Rpc('GET_LOGIN', Rpc.as_string, TypedObject, Rpc._login_ticket_request, False))
-        Rpc._register(session, Rpc('MAKE_PULLER', Rpc.as_object, TypedObject, Rpc._make_puller_request, False))
-        Rpc._register(session, Rpc('KILL_PULLER', Rpc.as_object, TypedObject, Rpc._kill_puller_request, False))
+        Rpc._register(session, Rpc('GET_SERVER_CONFIG', Rpc.as_object, TypedObject, False))
+        Rpc._register(session, Rpc('GET_DOCBASE_CONFIG', Rpc.as_object, TypedObject, False))
+        Rpc._register(session, Rpc('ENTRY_POINTS', Rpc.as_object, EntryPoints, False))
+        Rpc._register(session, Rpc('SET_LOCALE', Rpc.as_boolean, TypedObject, False))
+        Rpc._register(session, Rpc('FETCH', Rpc.as_object, PersistentProxy, True))
+        Rpc._register(session, Rpc('AUTHENTICATE_USER', Rpc.as_object, TypedObject, False))
+        Rpc._register(session, Rpc('GET_ERRORS', Rpc.as_collection, Collection, False))
+        Rpc._register(session, Rpc('FETCH_TYPE', Rpc.as_object, TypedObject, False))
+        Rpc._register(session, Rpc('EXEC', Rpc.as_collection, Collection, False))
+        Rpc._register(session, Rpc('TIME', Rpc.as_time, TypedObject, False))
+        Rpc._register(session, Rpc('COUNT_SESSIONS', Rpc.as_object, TypedObject, False))
+        Rpc._register(session, Rpc('EXEC_SELECT_SQL', Rpc.as_collection, Collection, False))
+        Rpc._register(session, Rpc('FTINDEX_AGENT_ADMIN', Rpc.as_object, TypedObject, False))
+        Rpc._register(session, Rpc('DUMP_JMS_CONFIG_LIST', Rpc.as_object, TypedObject, False))
+        Rpc._register(session, Rpc('GET_LOGIN', Rpc.as_string, TypedObject, False))
+        Rpc._register(session, Rpc('MAKE_PULLER', Rpc.as_object, TypedObject, False))
+        Rpc._register(session, Rpc('KILL_PULLER', Rpc.as_object, TypedObject, False))
+        Rpc._register(session, Rpc('GET_DIST_CONTENT_MAP', Rpc.as_object, TypedObject, True))
 
     @staticmethod
-    def _locale_request(session, charset=get_charset_id()):
+    def set_locale(session, charset=get_charset_id()):
         obj = TypedObject(session=session)
         obj.add(AttrValue(name="LANGUAGE", type=INT, values=[get_locale_id()]))
         obj.add(AttrValue(name="CHARACTER_SET", type=INT, values=[charset]))
@@ -125,7 +119,7 @@ class Rpc(object):
         return obj
 
     @staticmethod
-    def _auth_request(session, username, password):
+    def authenticate_user(session, username, password):
         obj = TypedObject(session=session)
         obj.add(AttrValue(name="CONNECT_POOLING", type=BOOL, values=[False]))
         obj.add(AttrValue(name="USER_PASSWORD", type=STRING, values=[password]))
@@ -135,7 +129,7 @@ class Rpc(object):
         return obj
 
     @staticmethod
-    def _server_config_request(session):
+    def get_server_config(session):
         obj = TypedObject(session=session)
         obj.add(AttrValue(name="OBJECT_TYPE", type=STRING, values=["dm_server_config"]))
         obj.add(AttrValue(name="FOR_REVERT", type=BOOL, values=[False]))
@@ -143,7 +137,7 @@ class Rpc(object):
         return obj
 
     @staticmethod
-    def _docbase_config_request(session):
+    def get_docbase_config(session):
         obj = TypedObject(session=session)
         obj.add(AttrValue(name="OBJECT_TYPE", type=STRING, values=["dm_docbase_config"]))
         obj.add(AttrValue(name="FOR_REVERT", type=BOOL, values=[False]))
@@ -151,20 +145,20 @@ class Rpc(object):
         return obj
 
     @staticmethod
-    def _fetch_type_request(session, typename, vstamp):
+    def fetch_type(session, typename, vstamp):
         obj = TypedObject(session=session)
         obj.add(AttrValue(name="TYPE_NAME", type=STRING, values=[typename]))
         obj.add(AttrValue(name="CACHE_VSTAMP", type=INT, values=[vstamp]))
         return obj
 
     @staticmethod
-    def _get_errors_request(session):
+    def get_errors(session):
         obj = TypedObject(session=session)
         obj.add(AttrValue(name="OBJECT_TYPE", type=STRING, values=["dmError"]))
         return obj
 
     @staticmethod
-    def _query_request(session, query, for_update, batch_hint, bof_dql=False):
+    def execute(session, query, for_update, batch_hint, bof_dql=False):
         obj = TypedObject(session=session)
         obj.add(AttrValue(name="QUERY", type=STRING, values=[query]))
         obj.add(AttrValue(name="FOR_UPDATE", type=BOOL, values=[for_update]))
@@ -173,7 +167,7 @@ class Rpc(object):
         return obj
 
     @staticmethod
-    def _sql_query_request(session, query, batch_hint):
+    def exec_select_sql(session, query, batch_hint):
         obj = TypedObject(session=session)
         obj.add(AttrValue(name="QUERY", type=STRING, values=[query]))
         obj.add(AttrValue(name="BATCH_HINT", type=INT, values=[batch_hint]))
@@ -186,7 +180,7 @@ class Rpc(object):
         return obj
 
     @staticmethod
-    def _index_agent_status_request(session, indexname, agentname):
+    def ftindex_agent_admin(session, indexname, agentname):
         obj = TypedObject(session=session)
         obj.add(AttrValue(name="NAME", type=STRING, values=[indexname]))
         obj.add(AttrValue(name="AGENT_INSTANCE_NAME", type=STRING, values=[agentname]))
@@ -194,7 +188,7 @@ class Rpc(object):
         return obj
 
     @staticmethod
-    def _login_ticket_request(session, username=None, scope="global", servername=None, timeout=300, singleuse=False):
+    def get_login(session, username=None, scope="global", servername=None, timeout=300, singleuse=False):
         obj = TypedObject(session=session)
         if username:
             obj.add(AttrValue(name="OPTIONAL_USER_NAME", type=STRING, values=[username]))
@@ -208,8 +202,8 @@ class Rpc(object):
         return obj
 
     @staticmethod
-    def _make_puller_request(session, objectId, storeId, contentId, formatId, ticket, other=False, offline=False,
-                             compression=False, noAccessUpdate=False):
+    def make_puller(session, objectId, storeId, contentId, formatId, ticket, other=False, offline=False,
+                    compression=False, noAccessUpdate=False):
         obj = TypedObject(session=session)
         obj.add(AttrValue(name="SYSOBJ_ID", type=ID, values=[objectId]))
         obj.add(AttrValue(name="STORE", type=ID, values=[storeId]))
@@ -221,11 +215,29 @@ class Rpc(object):
         obj.add(AttrValue(name="COMPRESSION", type=BOOL, values=[compression]))
         if noAccessUpdate:
             obj.add(AttrValue(name="NO_ACCESS_UPDATE", type=BOOL, values=[noAccessUpdate]))
+        return obj
 
     @staticmethod
-    def _kill_puller_request(session, handle):
+    def kill_puller(session, handle):
         obj = TypedObject(session=session)
         obj.add(AttrValue(name="HANDLE", type=INT, values=[handle]))
+        return obj
+
+    @staticmethod
+    def get_dist_content_map(session, fmt=None, page_number=0, page_modifier='', netloc_id='',
+                             request_time=int(time.mktime(time.gmtime())),
+                             expire_delta=360, lookup_resourcefork_info=False, include_surrogate_get=True):
+        obj = TypedObject(session=session)
+        if fmt:
+            obj.add(AttrValue(name="format", type=STRING, values=[fmt]))
+        obj.add(AttrValue(name="page_number", type=INT, values=[page_number]))
+        obj.add(AttrValue(name="page_modifier", type=STRING, values=[page_modifier]))
+        obj.add(AttrValue(name="netloc_id", type=STRING, values=[netloc_id]))
+        obj.add(AttrValue(name="request_time", type=STRING, values=[str(request_time)]))
+        obj.add(AttrValue(name="expire_delta", type=STRING, values=[str(expire_delta)]))
+        obj.add(AttrValue(name="lookup_resourcefork_info", type=BOOL, values=[lookup_resourcefork_info]))
+        obj.add(AttrValue(name="include_surrogate_get", type=BOOL, values=[include_surrogate_get]))
+        return obj
 
     @staticmethod
     def pep_name(rpc_name):

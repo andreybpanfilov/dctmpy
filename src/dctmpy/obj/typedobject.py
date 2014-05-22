@@ -293,7 +293,7 @@ class TypedObject(object):
             else:
                 return attr_value[0]
         else:
-            raise KeyError
+            raise KeyError("invalid key \"%s\"" % key)
 
     def __setitem__(self, key, value):
         if key in self.__attrs:
