@@ -38,3 +38,23 @@ class SysObject(Persistent):
 
     def has_content(self):
         return self[R_PAGE_CNT] > 0
+
+
+class DmrContent(Persistent):
+    def __init__(self, **kwargs):
+        super(DmrContent, self).__init__(**kwargs)
+
+    def get_content(self, objectId=NULL_ID):
+        handle = 0
+        try:
+            handle = self.session.make_puller(
+                objectId, self[STORAGE_ID], self[R_OBJECT_ID], self[FORMAT], self[DATA_TICKET]
+            )
+            if handle == 0:
+                raise RuntimeError("Unable make puller")
+            for chunk in self.session.download(handle):
+                yield chunk
+        finally:
+            pass
+            if handle > 0:
+                self.session.kill_puller(handle)

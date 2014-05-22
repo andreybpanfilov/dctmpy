@@ -283,10 +283,20 @@ def string_to_integer_array(string):
     return b.tolist()
 
 
-def integer_array_to_string(data):
+def integer_array(data):
     b = array.array("B")
-    b.extend(data)
-    return b.tostring()
+    if is_empty(data):
+        return b
+    if isinstance(data[0], int):
+        b.extend(data)
+    else:
+        for d in data:
+            b.extend(d)
+    return b
+
+
+def integer_array_to_string(data):
+    return integer_array(data).tostring()
 
 
 def is_empty(value):

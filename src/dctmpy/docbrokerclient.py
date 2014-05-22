@@ -3,6 +3,7 @@
 #  See main module for license.
 #
 from dctmpy import parse_address, AttrValue, STRING, INT
+from dctmpy.net.request import Request
 from dctmpy.netwise import Netwise
 from dctmpy.obj.docbroker import DocbaseMap
 from dctmpy.obj.typedobject import TypedObject
@@ -37,7 +38,7 @@ class DocbrokerClient(Netwise):
 
     def _request_object(self, data):
         try:
-            result = self.request(type=1, data=[data], immediate=True).receive().next()
+            result = self.request(Request, type=1, data=[data], immediate=True).receive().next()
         finally:
             self.disconnect()
         return result

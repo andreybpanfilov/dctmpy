@@ -4,7 +4,7 @@
 #
 
 from dctmpy.net import *
-from dctmpy.net.response import Response
+from dctmpy.net.response import Response, ContentResponse
 
 HEADER_SIZE = 4
 
@@ -38,6 +38,9 @@ class Request(object):
         )
 
     def receive(self):
+        return self._receive(Response)
+
+    def _receive(self, cls):
         message_payload = array.array('B')
         message_payload.fromstring(self.socket.recv(HEADER_SIZE))
         if len(message_payload) == 0:
@@ -70,7 +73,7 @@ class Request(object):
             if len(chunk) == 0 or len(message) == bytes_to_read:
                 break
 
-        return Response(**{
+        return cls(**{
             'message': message
         })
 
@@ -109,4 +112,9 @@ class Request(object):
             super(Request, self).__setattr__(name, value)
 
 
+class ContentRequest(Request):
+    def __init__(self, **kwargs):
+        super(ContentRequest, self).__init__(**kwargs)
 
+    def receive(self):
+        return self._receive(ContentResponse)

@@ -4,3 +4,6 @@
 #
 R_OBJECT_ID = "r_object_id"
 R_PAGE_CNT = "r_page_cnt"
+STORAGE_ID = "storage_id"
+FORMAT = "format"
+DATA_TICKET = "data_ticket"

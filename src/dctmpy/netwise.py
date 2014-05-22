@@ -7,7 +7,6 @@ import socket
 import ssl
 
 from dctmpy import *
-from dctmpy.net.request import Request
 
 
 class Netwise(object):
@@ -54,8 +53,8 @@ class Netwise(object):
     def __del__(self):
         self.disconnect()
 
-    def request(self, **kwargs):
-        return Request(**dict(kwargs, **{
+    def request(self, cls, **kwargs):
+        return cls(**dict(kwargs, **{
             'socket': self._socket(),
             'sequence': ++self.sequence,
             'version': self.version,

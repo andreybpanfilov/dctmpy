@@ -5,6 +5,7 @@
 import logging
 
 from dctmpy import *
+from dctmpy.net.request import Request, ContentRequest
 from dctmpy.netwise import Netwise
 from dctmpy.obj.collection import Collection, PersistentCollection
 from dctmpy.obj.persistent import PersistentProxy
@@ -55,17 +56,17 @@ class DocbaseClient(Netwise):
             self.authenticate()
 
     def _resolve_docbase_id(self):
-        response = self.request(
-            type=RPC_NEW_SESSION_BY_ADDR,
-            data=[
-                -1,
-                EMPTY_STRING,
-                CLIENT_VERSION_STRING,
-                EMPTY_STRING,
-                CLIENT_VERSION_ARRAY,
-                NULL_ID,
-            ],
-            immediate=True,
+        response = self.request(Request,
+                                type=RPC_NEW_SESSION_BY_ADDR,
+                                data=[
+                                    -1,
+                                    EMPTY_STRING,
+                                    CLIENT_VERSION_STRING,
+                                    EMPTY_STRING,
+                                    CLIENT_VERSION_ARRAY,
+                                    NULL_ID,
+                                ],
+                                immediate=True,
         ).receive()
 
         reason = response.next()
@@ -92,12 +93,12 @@ class DocbaseClient(Netwise):
     def disconnect(self):
         try:
             if self.session and self.session != NULL_ID:
-                self.request(
-                    type=RPC_CLOSE_SESSION,
-                    data=[
-                        self.session,
-                    ],
-                    immediate=True,
+                self.request(Request,
+                             type=RPC_CLOSE_SESSION,
+                             data=[
+                                 self.session,
+                             ],
+                             immediate=True,
                 ).receive()
             super(DocbaseClient, self).disconnect()
         finally:
@@ -107,17 +108,17 @@ class DocbaseClient(Netwise):
         ''
 
     def _connect(self):
-        response = self.request(
-            type=RPC_NEW_SESSION_BY_ADDR,
-            data=[
-                self.docbaseid,
-                EMPTY_STRING,
-                CLIENT_VERSION_STRING,
-                EMPTY_STRING,
-                CLIENT_VERSION_ARRAY,
-                NULL_ID,
-            ],
-            immediate=True,
+        response = self.request(Request,
+                                type=RPC_NEW_SESSION_BY_ADDR,
+                                data=[
+                                    self.docbaseid,
+                                    EMPTY_STRING,
+                                    CLIENT_VERSION_STRING,
+                                    EMPTY_STRING,
+                                    CLIENT_VERSION_ARRAY,
+                                    NULL_ID,
+                                ],
+                                immediate=True,
         ).receive()
 
         reason = response.next()
@@ -142,6 +143,20 @@ class DocbaseClient(Netwise):
 
         self.session = session
 
+    def download(self, handle, rpc=RPC_GET_BLOCK1):
+        i = 0
+        while True:
+            response = self.request(ContentRequest, type=rpc, data=[handle, i], immediate=True).receive()
+            length = response.next()
+            last = response.next() == 1
+            data = response.next()
+            if length != len(data):
+                raise RuntimeError("Invalid content size")
+            yield data
+            if last or length == 0:
+                break
+            i += 1
+
     def rpc(self, rpc_id, data=None):
         if not data:
             data = []
@@ -151,7 +166,7 @@ class DocbaseClient(Netwise):
 
         (valid, o_data, collection, persistent, maybemore, records) = (None, None, None, None, None, None)
 
-        response = self.request(type=rpc_id, data=data, immediate=True).receive()
+        response = self.request(Request, type=rpc_id, data=data, immediate=True).receive()
         message = response.next()
         o_data = response.last()
         if rpc_id == RPC_APPLY_FOR_OBJECT:

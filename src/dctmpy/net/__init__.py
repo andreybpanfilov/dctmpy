@@ -181,6 +181,10 @@ def read_string(data):
     return integer_array_to_string(read_array(data, True))
 
 
+def read_binary(data):
+    return integer_array(read_array(data, False))
+
+
 def read_strings(data):
     result = []
     for res in read_array(data):

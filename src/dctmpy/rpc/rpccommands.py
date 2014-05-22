@@ -68,6 +68,12 @@ class Rpc(object):
         return session.apply(RPC_APPLY_FOR_TIME, object_id, method, request, cls)
 
     @staticmethod
+    def as_long(session, object_id, method, request=None, cls=None):
+        if not object_id:
+            object_id = NULL_ID
+        return session.apply(RPC_APPLY_FOR_LONG, object_id, method, request, cls)
+
+    @staticmethod
     def _register(session, command):
         if command.command in session.entrypoints:
             session.knowncommands[command.command] = command
@@ -89,8 +95,8 @@ class Rpc(object):
         Rpc._register(session, Rpc('FTINDEX_AGENT_ADMIN', Rpc.as_object, TypedObject, False))
         Rpc._register(session, Rpc('DUMP_JMS_CONFIG_LIST', Rpc.as_object, TypedObject, False))
         Rpc._register(session, Rpc('GET_LOGIN', Rpc.as_string, TypedObject, False))
-        Rpc._register(session, Rpc('MAKE_PULLER', Rpc.as_object, TypedObject, False))
-        Rpc._register(session, Rpc('KILL_PULLER', Rpc.as_object, TypedObject, False))
+        Rpc._register(session, Rpc('MAKE_PULLER', Rpc.as_long, TypedObject, False))
+        Rpc._register(session, Rpc('KILL_PULLER', Rpc.as_boolean, TypedObject, False))
         Rpc._register(session, Rpc('GET_DIST_CONTENT_MAP', Rpc.as_object, TypedObject, True))
 
     @staticmethod
