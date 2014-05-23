@@ -98,6 +98,7 @@ class Rpc(object):
         Rpc._register(session, Rpc('MAKE_PULLER', Rpc.as_long, TypedObject, False))
         Rpc._register(session, Rpc('KILL_PULLER', Rpc.as_boolean, TypedObject, False))
         Rpc._register(session, Rpc('GET_DIST_CONTENT_MAP', Rpc.as_object, TypedObject, True))
+        Rpc._register(session, Rpc('CONVERT_ID', Rpc.as_id, TypedObject, True))
 
     @staticmethod
     def set_locale(session, charset=get_charset_id()):
@@ -243,6 +244,16 @@ class Rpc(object):
         obj.add(AttrValue(name="expire_delta", type=STRING, values=[str(expire_delta)]))
         obj.add(AttrValue(name="lookup_resourcefork_info", type=BOOL, values=[lookup_resourcefork_info]))
         obj.add(AttrValue(name="include_surrogate_get", type=BOOL, values=[include_surrogate_get]))
+        return obj
+
+    @staticmethod
+    def convert_id(session, fmt, page=0, page_modifier='', convert=False, useconvert=False):
+        obj = TypedObject(session=session)
+        obj.add(AttrValue(name="page", type=INT, values=[page]))
+        obj.add(AttrValue(name="format", type=STRING, values=[fmt]))
+        obj.add(AttrValue(name="page_modifier", type=STRING, values=[page_modifier]))
+        obj.add(AttrValue(name="convert", type=BOOL, values=[convert]))
+        obj.add(AttrValue(name="useconvert", type=BOOL, values=[useconvert]))
         return obj
 
     @staticmethod

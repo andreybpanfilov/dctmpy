@@ -143,17 +143,19 @@ class DocbaseClient(Netwise):
 
         self.session = session
 
-    def download(self, handle, rpc=RPC_GET_BLOCK1):
+    def download(self, handle, rpc=RPC_GET_BLOCK5):
         i = 0
         while True:
             response = self.request(ContentRequest, type=rpc, data=[handle, i], immediate=True).receive()
             length = response.next()
             last = response.next() == 1
             data = response.next()
+            if length == 0:
+                raise RuntimeError("Puller is closed")
             if length != len(data):
                 raise RuntimeError("Invalid content size")
             yield data
-            if last or length == 0:
+            if last:
                 break
             i += 1
 
