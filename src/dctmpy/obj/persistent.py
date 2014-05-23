@@ -89,7 +89,6 @@ class DmrContent(Persistent):
             for chunk in self.session.download(handle):
                 yield chunk
         finally:
-            pass
             if handle > 0:
                 self.session.kill_puller(handle)
 
