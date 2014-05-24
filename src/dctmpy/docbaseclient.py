@@ -230,7 +230,7 @@ class DocbaseClient(Netwise):
         elif rpc_id == RPC_APPLY_FOR_DOUBLE:
             return data
         elif rpc_id == RPC_APPLY_FOR_BOOL:
-            return data
+            return int(data) == 1
         elif rpc_id == RPC_APPLY_FOR_LONG:
             return data
         elif rpc_id == RPC_APPLY_FOR_TIME:

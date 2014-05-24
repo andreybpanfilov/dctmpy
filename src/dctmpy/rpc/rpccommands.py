@@ -99,6 +99,8 @@ class Rpc(object):
         Rpc._register(session, Rpc('KILL_PULLER', Rpc.as_boolean, TypedObject, False))
         Rpc._register(session, Rpc('GET_DIST_CONTENT_MAP', Rpc.as_object, TypedObject, True))
         Rpc._register(session, Rpc('CONVERT_ID', Rpc.as_id, TypedObject, True))
+        Rpc._register(session, Rpc('MAKE_PUSHER', Rpc.as_long, TypedObject, False))
+        Rpc._register(session, Rpc('START_PUSH', Rpc.as_boolean, TypedObject, False))
 
     @staticmethod
     def set_locale(session, charset=get_charset_id()):
@@ -254,6 +256,31 @@ class Rpc(object):
         obj.add(AttrValue(name="page_modifier", type=STRING, values=[page_modifier]))
         obj.add(AttrValue(name="convert", type=BOOL, values=[convert]))
         obj.add(AttrValue(name="useconvert", type=BOOL, values=[useconvert]))
+        return obj
+
+    @staticmethod
+    def make_pusher(session, store, compression=False):
+        obj = TypedObject(session=session)
+        obj.add(AttrValue(name="STORE", type=ID, values=[store]))
+        obj.add(AttrValue(name="COMPRESSION", type=BOOL, values=[compression]))
+        return obj
+
+    @staticmethod
+    def start_push(session, handle, content_id, fmt, size, size_low, size_high=0, d_ticket=0, is_other=False,
+                   compression=False, can_use_new_callbacks=True, encoded_content_attrs='', i_partition=0):
+        obj = TypedObject(session=session)
+        obj.add(AttrValue(name="HANDLE", type=INT, values=[handle]))
+        obj.add(AttrValue(name="CONTENT_ID", type=ID, values=[content_id]))
+        obj.add(AttrValue(name="FORMAT", type=ID, values=[fmt]))
+        obj.add(AttrValue(name="D_TICKET", type=INT, values=[d_ticket]))
+        obj.add(AttrValue(name="SIZE", type=INT, values=[size]))
+        obj.add(AttrValue(name="SIZE_LOW", type=INT, values=[size_low]))
+        obj.add(AttrValue(name="SIZE_HIGH", type=INT, values=[size_high]))
+        obj.add(AttrValue(name="IS_OTHER", type=BOOL, values=[is_other]))
+        obj.add(AttrValue(name="COMPRESSION", type=BOOL, values=[compression]))
+        obj.add(AttrValue(name="CAN_USE_NEW_CALLBACKS", type=BOOL, values=[can_use_new_callbacks]))
+        obj.add(AttrValue(name="ENCODED_CONTENT_ATTRS", type=STRING, values=[encoded_content_attrs]))
+        obj.add(AttrValue(name="I_PARTITION", type=INT, values=[i_partition]))
         return obj
 
     @staticmethod
