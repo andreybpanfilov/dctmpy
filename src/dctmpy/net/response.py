@@ -67,9 +67,9 @@ class Response(object):
             super(Response, self).__setattr__(name, value)
 
 
-class ContentResponse(Response):
+class DownloadResponse(Response):
     def __init__(self, **kwargs):
-        super(ContentResponse, self).__init__(**kwargs)
+        super(DownloadResponse, self).__init__(**kwargs)
 
     def _read_string(self):
         return read_binary(self.message)

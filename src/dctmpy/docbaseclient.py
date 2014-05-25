@@ -5,7 +5,7 @@
 import logging
 
 from dctmpy import *
-from dctmpy.net.request import Request, ContentRequest
+from dctmpy.net.request import Request, DownloadRequest
 from dctmpy.netwise import Netwise
 from dctmpy.obj.collection import Collection, PersistentCollection
 from dctmpy.obj.persistent import PersistentProxy
@@ -146,7 +146,7 @@ class DocbaseClient(Netwise):
     def download(self, handle, rpc=RPC_GET_BLOCK5):
         i = 0
         while True:
-            response = self.request(ContentRequest, type=rpc, data=[handle, i], immediate=True).receive()
+            response = self.request(DownloadRequest, type=rpc, data=[handle, i], immediate=True).receive()
             length = response.next()
             last = response.next() == 1
             data = response.next()

@@ -101,6 +101,7 @@ class Rpc(object):
         Rpc._register(session, Rpc('CONVERT_ID', Rpc.as_id, TypedObject, True))
         Rpc._register(session, Rpc('MAKE_PUSHER', Rpc.as_long, TypedObject, False))
         Rpc._register(session, Rpc('START_PUSH', Rpc.as_boolean, TypedObject, False))
+        Rpc._register(session, Rpc('END_PUSH_V2', Rpc.as_object, TypedObject, False))
 
     @staticmethod
     def set_locale(session, charset=get_charset_id()):
@@ -281,6 +282,12 @@ class Rpc(object):
         obj.add(AttrValue(name="CAN_USE_NEW_CALLBACKS", type=BOOL, values=[can_use_new_callbacks]))
         obj.add(AttrValue(name="ENCODED_CONTENT_ATTRS", type=STRING, values=[encoded_content_attrs]))
         obj.add(AttrValue(name="I_PARTITION", type=INT, values=[i_partition]))
+        return obj
+
+    @staticmethod
+    def end_push_v2(session, handle):
+        obj = TypedObject(session=session)
+        obj.add(AttrValue(name="HANDLE", type=INT, values=[handle]))
         return obj
 
     @staticmethod
