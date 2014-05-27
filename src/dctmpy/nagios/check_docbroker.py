@@ -3,10 +3,11 @@
 import argparse
 import re
 
-from nagiosplugin import Summary, Check, Resource, guarded, Result, Metric
-from nagiosplugin.state import Critical, Warn, Ok, Unknown
+from nagiosplugin import Check, Resource, guarded, Result, Metric
+from nagiosplugin.state import Critical, Ok, Unknown
 
 from dctmpy.docbrokerclient import DocbrokerClient
+from dctmpy.nagios import CheckSummary
 
 
 NULL_CONTEXT = 'null'
@@ -85,47 +86,6 @@ class CheckDocbroker(Resource):
             return getattr(self.args, name)
         else:
             return AttributeError("Unknown attribute %s in %s" % (name, str(self.__class__)))
-
-    @staticmethod
-    def is_empty(value):
-        if value is None:
-            return True
-        if isinstance(value, str):
-            if len(value) == 0:
-                return True
-            elif value.isspace():
-                return True
-            else:
-                return False
-        if isinstance(value, list):
-            if len(value) == 0:
-                return True
-            else:
-                return False
-        if isinstance(value, dict):
-            if len(value) == 0:
-                return True
-            else:
-                return False
-        return False
-
-
-class CheckSummary(Summary):
-    def verbose(self, results):
-        return ''
-
-    def ok(self, results):
-        return self.format(results)
-
-    def problem(self, results):
-        return self.format(results)
-
-    def format(self, results):
-        message = ""
-        for state in [Ok, Unknown, Warn, Critical]:
-            hint = ", ".join(str(x) for x in results if x.state == state and not CheckDocbroker.is_empty(str(x)))
-            message = ", ".join(x for x in [hint, message] if not (CheckDocbroker.is_empty(x)))
-        return message
 
 
 @guarded

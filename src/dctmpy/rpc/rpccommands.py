@@ -32,78 +32,6 @@ class Rpc(object):
             super(Rpc, self).__setattr__(name, value)
 
     @staticmethod
-    def as_object(session, object_id, method, request=None, cls=TypedObject):
-        if not object_id:
-            object_id = NULL_ID
-        return session.apply(RPC_APPLY_FOR_OBJECT, object_id, method, request, cls)
-
-    @staticmethod
-    def as_collection(session, object_id, method, request=None, cls=Collection):
-        if not object_id:
-            object_id = NULL_ID
-        return session.apply(RPC_APPLY, object_id, method, request, cls)
-
-    @staticmethod
-    def as_string(session, object_id, method, request=None, cls=None):
-        if not object_id:
-            object_id = NULL_ID
-        return session.apply(RPC_APPLY_FOR_STRING, object_id, method, request, cls)
-
-    @staticmethod
-    def as_id(session, object_id, method, request=None, cls=None):
-        if not object_id:
-            object_id = NULL_ID
-        return session.apply(RPC_APPLY_FOR_ID, object_id, method, request, cls)
-
-    @staticmethod
-    def as_boolean(session, object_id, method, request=None, cls=None):
-        if not object_id:
-            object_id = NULL_ID
-        return session.apply(RPC_APPLY_FOR_BOOL, object_id, method, request, cls)
-
-    @staticmethod
-    def as_time(session, object_id, method, request=None, cls=None):
-        if not object_id:
-            object_id = NULL_ID
-        return session.apply(RPC_APPLY_FOR_TIME, object_id, method, request, cls)
-
-    @staticmethod
-    def as_long(session, object_id, method, request=None, cls=None):
-        if not object_id:
-            object_id = NULL_ID
-        return session.apply(RPC_APPLY_FOR_LONG, object_id, method, request, cls)
-
-    @staticmethod
-    def _register(session, command):
-        if command.command in session.entrypoints:
-            session.knowncommands[command.command] = command
-
-    @staticmethod
-    def register_known_commands(session):
-        Rpc._register(session, Rpc('GET_SERVER_CONFIG', Rpc.as_object, TypedObject, False))
-        Rpc._register(session, Rpc('GET_DOCBASE_CONFIG', Rpc.as_object, TypedObject, False))
-        Rpc._register(session, Rpc('ENTRY_POINTS', Rpc.as_object, EntryPoints, False))
-        Rpc._register(session, Rpc('SET_LOCALE', Rpc.as_boolean, TypedObject, False))
-        Rpc._register(session, Rpc('FETCH', Rpc.as_object, PersistentProxy, True))
-        Rpc._register(session, Rpc('AUTHENTICATE_USER', Rpc.as_object, TypedObject, False))
-        Rpc._register(session, Rpc('GET_ERRORS', Rpc.as_collection, Collection, False))
-        Rpc._register(session, Rpc('FETCH_TYPE', Rpc.as_object, TypedObject, False))
-        Rpc._register(session, Rpc('EXEC', Rpc.as_collection, Collection, False))
-        Rpc._register(session, Rpc('TIME', Rpc.as_time, TypedObject, False))
-        Rpc._register(session, Rpc('COUNT_SESSIONS', Rpc.as_object, TypedObject, False))
-        Rpc._register(session, Rpc('EXEC_SELECT_SQL', Rpc.as_collection, Collection, False))
-        Rpc._register(session, Rpc('FTINDEX_AGENT_ADMIN', Rpc.as_object, TypedObject, False))
-        Rpc._register(session, Rpc('DUMP_JMS_CONFIG_LIST', Rpc.as_object, TypedObject, False))
-        Rpc._register(session, Rpc('GET_LOGIN', Rpc.as_string, TypedObject, False))
-        Rpc._register(session, Rpc('MAKE_PULLER', Rpc.as_long, TypedObject, False))
-        Rpc._register(session, Rpc('KILL_PULLER', Rpc.as_boolean, TypedObject, False))
-        Rpc._register(session, Rpc('GET_DIST_CONTENT_MAP', Rpc.as_object, TypedObject, True))
-        Rpc._register(session, Rpc('CONVERT_ID', Rpc.as_id, TypedObject, True))
-        Rpc._register(session, Rpc('MAKE_PUSHER', Rpc.as_long, TypedObject, False))
-        Rpc._register(session, Rpc('START_PUSH', Rpc.as_boolean, TypedObject, False))
-        Rpc._register(session, Rpc('END_PUSH_V2', Rpc.as_object, TypedObject, False))
-
-    @staticmethod
     def set_locale(session, charset=get_charset_id()):
         obj = TypedObject(session=session)
         obj.add(AttrValue(name="LANGUAGE", type=INT, values=[get_locale_id()]))
@@ -290,9 +218,81 @@ class Rpc(object):
         obj.add(AttrValue(name="HANDLE", type=INT, values=[handle]))
         return obj
 
-    @staticmethod
-    def pep_name(rpc_name):
-        if 'EXEC' == rpc_name:
-            return "execute"
-        s = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', rpc_name)
-        return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s).lower()
+
+def as_object(session, object_id, method, request=None, cls=TypedObject):
+    if not object_id:
+        object_id = NULL_ID
+    return session.apply(RPC_APPLY_FOR_OBJECT, object_id, method, request, cls)
+
+
+def as_collection(session, object_id, method, request=None, cls=Collection):
+    if not object_id:
+        object_id = NULL_ID
+    return session.apply(RPC_APPLY, object_id, method, request, cls)
+
+
+def as_string(session, object_id, method, request=None, cls=None):
+    if not object_id:
+        object_id = NULL_ID
+    return session.apply(RPC_APPLY_FOR_STRING, object_id, method, request, cls)
+
+
+def as_id(session, object_id, method, request=None, cls=None):
+    if not object_id:
+        object_id = NULL_ID
+    return session.apply(RPC_APPLY_FOR_ID, object_id, method, request, cls)
+
+
+def as_boolean(session, object_id, method, request=None, cls=None):
+    if not object_id:
+        object_id = NULL_ID
+    return session.apply(RPC_APPLY_FOR_BOOL, object_id, method, request, cls)
+
+
+def as_time(session, object_id, method, request=None, cls=None):
+    if not object_id:
+        object_id = NULL_ID
+    return session.apply(RPC_APPLY_FOR_TIME, object_id, method, request, cls)
+
+
+def as_long(session, object_id, method, request=None, cls=None):
+    if not object_id:
+        object_id = NULL_ID
+    return session.apply(RPC_APPLY_FOR_LONG, object_id, method, request, cls)
+
+
+def _register(session, command):
+    if command.command in session.entrypoints:
+        session.knowncommands[command.command] = command
+
+
+def register_known_commands(session):
+    _register(session, Rpc('GET_SERVER_CONFIG', as_object, TypedObject, False))
+    _register(session, Rpc('GET_DOCBASE_CONFIG', as_object, TypedObject, False))
+    _register(session, Rpc('ENTRY_POINTS', as_object, EntryPoints, False))
+    _register(session, Rpc('SET_LOCALE', as_boolean, TypedObject, False))
+    _register(session, Rpc('FETCH', as_object, PersistentProxy, True))
+    _register(session, Rpc('AUTHENTICATE_USER', as_object, TypedObject, False))
+    _register(session, Rpc('GET_ERRORS', as_collection, Collection, False))
+    _register(session, Rpc('FETCH_TYPE', as_object, TypedObject, False))
+    _register(session, Rpc('EXEC', as_collection, Collection, False))
+    _register(session, Rpc('TIME', as_time, TypedObject, False))
+    _register(session, Rpc('COUNT_SESSIONS', as_object, TypedObject, False))
+    _register(session, Rpc('EXEC_SELECT_SQL', as_collection, Collection, False))
+    _register(session, Rpc('FTINDEX_AGENT_ADMIN', as_object, TypedObject, False))
+    _register(session, Rpc('DUMP_JMS_CONFIG_LIST', as_object, TypedObject, False))
+    _register(session, Rpc('GET_LOGIN', as_string, TypedObject, False))
+    _register(session, Rpc('MAKE_PULLER', as_long, TypedObject, False))
+    _register(session, Rpc('KILL_PULLER', as_boolean, TypedObject, False))
+    _register(session, Rpc('GET_DIST_CONTENT_MAP', as_object, TypedObject, True))
+    _register(session, Rpc('CONVERT_ID', as_id, TypedObject, True))
+    _register(session, Rpc('MAKE_PUSHER', as_long, TypedObject, False))
+    _register(session, Rpc('START_PUSH', as_boolean, TypedObject, False))
+    _register(session, Rpc('END_PUSH_V2', as_object, TypedObject, False))
+
+
+def pep_name(rpc_name):
+    if 'EXEC' == rpc_name:
+        return "execute"
+    s = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', rpc_name)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s).lower()

@@ -11,7 +11,7 @@ from dctmpy.obj.collection import Collection, PersistentCollection
 from dctmpy.obj.persistent import PersistentProxy
 from dctmpy.obj.type import TypeObject
 from dctmpy.obj.typedobject import TypedObject
-from dctmpy.rpc.rpccommands import Rpc
+from dctmpy.rpc.rpccommands import Rpc, as_collection, register_known_commands, pep_name
 
 NETWISE_VERSION = 3
 NETWISE_RELEASE = 5
@@ -313,12 +313,12 @@ class DocbaseClient(Netwise):
             }
             if self.knowncommands is None:
                 self.knowncommands = {}
-            Rpc.register_known_commands(self)
+            register_known_commands(self)
             for name in self.entrypoints.keys():
                 self._add_entry_point(name)
 
         self.entrypoints = self.entry_points().methods()
-        Rpc.register_known_commands(self)
+        register_known_commands(self)
         for name in self.entrypoints.keys():
             self._add_entry_point(name)
 
@@ -380,14 +380,14 @@ class DocbaseClient(Netwise):
             super(DocbaseClient, self).__setattr__(name, value)
 
     def _add_entry_point(self, name):
-        pep_name = Rpc.pep_name(name)
-        if getattr(DocbaseClient, pep_name, None):
+        func = pep_name(name)
+        if getattr(DocbaseClient, func, None):
             return
         elif name in self.knowncommands:
             command = self.knowncommands[name]
             method = command.method
             cls = command.returntype
-            request = getattr(Rpc, pep_name, None)
+            request = getattr(Rpc, func, None)
             needid = command.needid
             argc = 0
             if request:
@@ -410,9 +410,9 @@ class DocbaseClient(Netwise):
                         return method(self, NULL_ID, name, request(self, *args), cls)
         else:
             def inner(self, object_id=NULL_ID, request=None, cls=Collection):
-                return Rpc.as_collection(self, object_id, name, request, cls)
+                return as_collection(self, object_id, name, request, cls)
 
-        inner.__name__ = pep_name
+        inner.__name__ = func
         setattr(self.__class__, inner.__name__, inner)
 
 
