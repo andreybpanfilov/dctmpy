@@ -214,33 +214,3 @@ class Rpc(object):
         obj = TypedObject(session=session)
         obj.add(AttrValue(name="HANDLE", type=INT, values=[handle]))
         return obj
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

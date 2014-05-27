@@ -54,7 +54,7 @@ class DmSysObject(Persistent):
         if fmt is None:
             fmt = self[A_CONTENT_TYPE]
         objectId = self.object_id()
-        content = self.session.fetch(convert_id(objectId, fmt, page, page_modifier))
+        content = self.session.fetch(self.session.convert_id(objectId, fmt, page, page_modifier))
         for chunk in content.get_content(objectId):
             yield chunk
 
@@ -81,7 +81,7 @@ class DmrContent(Persistent):
     def get_content(self, objectId=NULL_ID):
         handle = 0
         try:
-            handle = make_puller(
+            handle = self.session.make_puller(
                 objectId, self[STORAGE_ID], self.object_id(), self[FORMAT], self[DATA_TICKET]
             )
             if handle == 0:
@@ -90,7 +90,7 @@ class DmrContent(Persistent):
                 yield chunk
         finally:
             if handle > 0:
-                kill_puller(handle)
+                self.session.kill_puller(handle)
 
 
 TAG_CLASS_MAPPING = {

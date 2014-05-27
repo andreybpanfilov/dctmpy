@@ -172,7 +172,7 @@ class CheckSummary(Summary):
         message = ""
         for state in [Ok, Unknown, Warn, Critical]:
             hint = ", ".join(str(x) for x in results if x.state == state and not is_empty(str(x)))
-            message = ", ".join(x for x in [hint, message] if not ( is_empty(x)))
+            message = ", ".join(x for x in [hint, message] if not (is_empty(x)))
         return message
 
 
