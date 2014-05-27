@@ -401,7 +401,7 @@ class CheckDocbase(Resource):
                 "AND a_wq_name ='" + server_id + "'"
         try:
             result = CheckDocbase.read_object(self.session, query)
-            yield Metric(server_name[-20:], int(result['work_queue_size']), min=0, context=THRESHOLDS)
+            yield Metric(server_name, int(result['work_queue_size']), min=0, context=THRESHOLDS)
         except Exception, e:
             message = "Unable to execute query: %s" % str(e)
             self.add_result(Critical, message)
