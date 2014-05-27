@@ -11,7 +11,8 @@ from dctmpy.obj.collection import Collection, PersistentCollection
 from dctmpy.obj.persistent import PersistentProxy
 from dctmpy.obj.type import TypeObject
 from dctmpy.obj.typedobject import TypedObject
-from dctmpy.rpc.rpccommands import Rpc, as_collection, register_known_commands, pep_name
+from dctmpy.rpc import pep_name, register_known_commands, as_collection
+from dctmpy.rpc.rpccommands import Rpc
 
 NETWISE_VERSION = 3
 NETWISE_RELEASE = 5
