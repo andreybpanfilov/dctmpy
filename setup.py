@@ -4,9 +4,9 @@ from setuptools import setup
 
 
 if sys.version_info < (2, 7):
-    extras_require = {'nagios': ['argparse', 'nagiosplugin']}
+    extras_require = {'nagios': ['argparse', 'nagiosplugin>=1.2.2']}
 else:
-    extras_require = {'nagios': ['nagiosplugin']}
+    extras_require = {'nagios': ['nagiosplugin>=1.2.2']}
 
 setup(
     name='dctmpy',

@@ -16,7 +16,7 @@ except ImportError:
 
 from xml.dom import minidom
 
-from nagiosplugin import Metric, Result, Summary, Check, Resource, guarded, ScalarResult, ScalarContext
+from nagiosplugin import Metric, Result, Summary, Check, Resource, guarded, ScalarContext
 from nagiosplugin.state import Critical, Warn, Ok, Unknown
 
 from dctmpy.docbaseclient import DocbaseClient
@@ -69,7 +69,7 @@ class CheckDocbase(Resource):
         self.session = None
 
     def probe(self):
-        yield CustomMetric(NULL_CONTEXT, 0, context=NULL_CONTEXT)
+        yield Metric(NULL_CONTEXT, 0, context=NULL_CONTEXT)
         try:
             self.check_login()
             if not self.session:
@@ -95,9 +95,9 @@ class CheckDocbase(Resource):
         except Exception, e:
             self.add_result(Critical, "Unable to retrieve session count: " + str(e))
             return
-        yield CustomMetric('sessioncount', int(count['hot_list_size']), min=0,
-                           max=int(count['concurrent_sessions']),
-                           context=THRESHOLDS)
+        yield Metric('sessioncount', int(count['hot_list_size']), min=0,
+                     max=int(count['concurrent_sessions']),
+                     context=THRESHOLDS)
 
     def check_targets(self):
         targets = []
@@ -336,7 +336,7 @@ class CheckDocbase(Resource):
     def check_time_skew(self):
         try:
             server_time = self.session.time()
-            yield CustomMetric('timeskew', abs(server_time - time.time()), min=0, context=THRESHOLDS)
+            yield Metric('timeskew', abs(server_time - time.time()), min=0, context=THRESHOLDS)
         except Exception, e:
             message = "Unable to acquire current time: %s" % str(e)
             self.add_result(Critical, message)
@@ -367,7 +367,6 @@ class CheckDocbase(Resource):
                 if count > 1:
                     message += ", "
                 message += self.format.format(**rec)
-
             yield CustomMetric('count', count, min=0, context=THRESHOLDS).add_message(message)
         except Exception, e:
             message = "Unable to execute query: %s" % str(e)
@@ -376,7 +375,7 @@ class CheckDocbase(Resource):
     def check_count_query(self):
         try:
             result = CheckDocbase.read_object(self.session, self.query)
-            yield CustomMetric('countquery', int(result.values().pop()), min=0, context=THRESHOLDS)
+            yield Metric('countquery', int(result.values().pop()), min=0, context=THRESHOLDS)
         except Exception, e:
             message = "Unable to execute query: %s" % str(e)
             self.add_result(Critical, message)
@@ -388,7 +387,7 @@ class CheckDocbase(Resource):
                 "AND a_wq_name is NULLSTRING"
         try:
             result = CheckDocbase.read_object(self.session, query)
-            yield CustomMetric('workqueue', int(result['work_queue_size']), min=0, context=THRESHOLDS)
+            yield Metric('workqueue', int(result['work_queue_size']), min=0, context=THRESHOLDS)
         except Exception, e:
             message = "Unable to execute query: %s" % str(e)
             self.add_result(Critical, message)
@@ -402,7 +401,7 @@ class CheckDocbase(Resource):
                 "AND a_wq_name ='" + server_id + "'"
         try:
             result = CheckDocbase.read_object(self.session, query)
-            yield CustomMetric(server_name[-20:], int(result['work_queue_size']), min=0, context=THRESHOLDS)
+            yield Metric(server_name[-20:], int(result['work_queue_size']), min=0, context=THRESHOLDS)
         except Exception, e:
             message = "Unable to execute query: %s" % str(e)
             self.add_result(Critical, message)
@@ -428,7 +427,7 @@ class CheckDocbase(Resource):
                 + username + "'AND task_state not in ('failed','warning')"
         try:
             result = CheckDocbase.read_object(self.session, query)
-            return CustomMetric(username[-20:], int(result['queue_size']), min=0, context=THRESHOLDS)
+            return Metric(username, int(result['queue_size']), min=0, context=THRESHOLDS)
         except Exception, e:
             message = "Unable to execute query: %s" % str(e)
             self.add_result(Critical, message)
@@ -438,7 +437,7 @@ class CheckDocbase(Resource):
                 "FROM dmi_queue_item WHERE name='dm_mediaserver' AND delete_flag=FALSE"
         try:
             result = CheckDocbase.read_object(self.session, query)
-            yield CustomMetric("dm_mediaserver", int(result['queue_size']), min=0, context=THRESHOLDS)
+            yield Metric("dm_mediaserver", int(result['queue_size']), min=0, context=THRESHOLDS)
         except Exception, e:
             message = "Unable to execute query: %s" % str(e)
             self.add_result(Critical, message)
@@ -812,24 +811,6 @@ class CheckSummary(Summary):
         return message
 
 
-class CustomScalarResult(ScalarResult):
-    def __str__(self):
-        if hasattr(self.metric, 'message'):
-            return self.metric.message
-        return super(CustomScalarResult, self).__str__()
-
-
-class CustomMetric(Metric):
-    def add_message(self, message):
-        self.message = message
-        return self
-
-    def replace(self, **attr):
-        if hasattr(self, 'message'):
-            return super(CustomMetric, self).replace(**attr).add_message(self.message)
-        return super(CustomMetric, self).replace(**attr)
-
-
 modes = {
     'sessioncount': [CheckDocbase.check_sessions, True, "check active session count"],
     'targets': [CheckDocbase.check_targets, False, "check whether server is registered on projection targets"],
@@ -902,9 +883,35 @@ def main():
     else:
         check.name = args.mode
     check.add(CheckDocbase(args, check.results))
-    check.add(ScalarContext(THRESHOLDS, getattr(args, "warning"), getattr(args, "critical"),
-                            result_cls=CustomScalarResult))
+    check.add(
+        ScalarContext(
+            THRESHOLDS,
+            getattr(args, "warning"),
+            getattr(args, "critical"),
+            fmt_metric=fmt_metric
+        )
+    )
     check.main(timeout=args.timeout)
+
+
+def fmt_metric(metric, context):
+    if hasattr(metric, 'message'):
+        return getattr(metric, 'message')
+    return '{name} is {valueunit}'.format(
+        name=metric.name, value=metric.value, uom=metric.uom,
+        valueunit=metric.valueunit, min=metric.min, max=metric.max
+    )
+
+
+class CustomMetric(Metric):
+    def add_message(self, message):
+        self.message = message
+        return self
+
+    def replace(self, **attr):
+        if hasattr(self, 'message'):
+            return super(CustomMetric, self).replace(**attr).add_message(self.message)
+        return super(CustomMetric, self).replace(**attr)
 
 
 if __name__ == '__main__':
