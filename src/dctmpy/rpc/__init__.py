@@ -43,6 +43,9 @@ def register_known_commands(session):
     _register(session, Rpc('MAKE_PUSHER', as_long, TypedObject, False))
     _register(session, Rpc('START_PUSH', as_boolean, TypedObject, False))
     _register(session, Rpc('END_PUSH_V2', as_object, TypedObject, False))
+    _register(session, Rpc('DO_METHOD', as_object, TypedObject, False))
+    _register(session, Rpc('ENCRYPT_PASSWORD', as_string, TypedObject, False))
+    _register(session, Rpc('ENCRYPT_TEXT', as_string, TypedObject, False))
 
 
 def _register(session, command):

@@ -214,3 +214,36 @@ class Rpc(object):
         obj = TypedObject(session=session)
         obj.add(AttrValue(name="HANDLE", type=INT, values=[handle]))
         return obj
+
+    @staticmethod
+    def do_method(session, method, arguments=None, async=None, direct=None, save=None, timeout=None, as_server=None,
+                  trace=None):
+        obj = TypedObject(session=session)
+        obj.add(AttrValue(name="METHOD", type=STRING, values=[method]))
+        if arguments is not None:
+            obj.add(AttrValue(name="ARGUMENTS", type=STRING, values=[arguments]))
+        if timeout is not None:
+            obj.add(AttrValue(name="TIME_OUT", type=INT, values=[timeout]))
+        if direct is not None:
+            obj.add(AttrValue(name="LAUNCH_DIRECT", type=BOOL, values=[direct]))
+        if async is not None:
+            obj.add(AttrValue(name="LAUNCH_ASYNC", type=BOOL, values=[async]))
+        if save is not None:
+            obj.add(AttrValue(name="SAVE_RESULTS", type=BOOL, values=[save]))
+        if as_server is not None:
+            obj.add(AttrValue(name="RUN_AS_SERVER", type=BOOL, values=[as_server]))
+        if trace is not None:
+            obj.add(AttrValue(name="TRACE_LAUNCH", type=BOOL, values=[trace]))
+        return obj
+
+    @staticmethod
+    def encrypt_password(session, password):
+        obj = TypedObject(session=session)
+        obj.add(AttrValue(name="PASSWORD_TO_ENCRYPT", type=STRING, values=[session.obfuscate(password)]))
+        return obj
+
+    @staticmethod
+    def encrypt_text(session, password):
+        obj = TypedObject(session=session)
+        obj.add(AttrValue(name="TEXT_TO_ENCRYPT", type=STRING, values=[session.obfuscate(password)]))
+        return obj

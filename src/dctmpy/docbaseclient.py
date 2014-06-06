@@ -293,7 +293,7 @@ class DocbaseClient(Netwise):
         if not self.password:
             raise RuntimeError("Empty password")
 
-        result = self.authenticate_user(self.username, self._obfuscate(self.password))
+        result = self.authenticate_user(self.username, self.obfuscate(self.password))
         if result['RETURN_VALUE'] != 1:
             raise RuntimeError("Unable to authenticate")
 
@@ -348,7 +348,7 @@ class DocbaseClient(Netwise):
             raise RuntimeError("Error occurred while executing query: %s" % query, e)
         return collection
 
-    def _obfuscate(self, password):
+    def obfuscate(self, password):
         if self._isobfuscated(password):
             return password
         return "".join(
