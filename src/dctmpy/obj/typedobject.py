@@ -205,9 +205,25 @@ class TypedObject(object):
                 result += "%d\n" % len(attr_value.values)
             for value in attr_value.values:
                 if STRING == attr_value.type:
+                    if value is None:
+                        value = ""
                     result += "A %d %s\n" % (len(value), value)
+                elif ID == attr_value.type:
+                    if is_empty(value):
+                        value = NULL_ID
+                    result += "%s\n" % value
                 elif BOOL == attr_value.type:
+                    if value is None:
+                        value = False
                     result += "%s\n" % ["F", "T"][value]
+                elif INT == attr_value.type or DOUBLE == attr_value.type:
+                    if value is None:
+                        value = 0
+                    result += "%s\n" % value
+                elif TIME == attr_value.type:
+                    if value is None:
+                        value = "nulldate"
+                    result += "%s\n" % value
                 else:
                     result += "%s\n" % value
         return result

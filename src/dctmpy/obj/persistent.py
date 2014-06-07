@@ -64,6 +64,71 @@ class DmDocument(DmSysObject):
         super(DmDocument, self).__init__(**kwargs)
 
 
+class DmPlugin(DmSysObject):
+    def __init__(self, **kwargs):
+        super(DmPlugin, self).__init__(**kwargs)
+
+
+class DmQuery(DmSysObject):
+    def __init__(self, **kwargs):
+        super(DmQuery, self).__init__(**kwargs)
+
+
+class DmMethod(DmSysObject):
+    def __init__(self, **kwargs):
+        super(DmMethod, self).__init__(**kwargs)
+
+
+class DmiExprCode(DmSysObject):
+    def __init__(self, **kwargs):
+        super(DmiExprCode, self).__init__(**kwargs)
+
+
+class DmOutputDevice(DmSysObject):
+    def __init__(self, **kwargs):
+        super(DmOutputDevice, self).__init__(**kwargs)
+
+
+class DmRouter(DmSysObject):
+    def __init__(self, **kwargs):
+        super(DmRouter, self).__init__(**kwargs)
+
+
+class DmRegistered(DmSysObject):
+    def __init__(self, **kwargs):
+        super(DmRegistered, self).__init__(**kwargs)
+
+
+class DmServerConfig(DmSysObject):
+    def __init__(self, **kwargs):
+        super(DmServerConfig, self).__init__(**kwargs)
+
+
+class DmDocbaseConfig(DmSysObject):
+    def __init__(self, **kwargs):
+        super(DmDocbaseConfig, self).__init__(**kwargs)
+
+
+class DmPolicy(DmSysObject):
+    def __init__(self, **kwargs):
+        super(DmPolicy, self).__init__(**kwargs)
+
+
+class DmProcess(DmSysObject):
+    def __init__(self, **kwargs):
+        super(DmProcess, self).__init__(**kwargs)
+
+
+class DmActivity(DmSysObject):
+    def __init__(self, **kwargs):
+        super(DmActivity, self).__init__(**kwargs)
+
+
+class DmNote(DmSysObject):
+    def __init__(self, **kwargs):
+        super(DmNote, self).__init__(**kwargs)
+
+
 class DmFolder(DmSysObject):
     def __init__(self, **kwargs):
         super(DmFolder, self).__init__(**kwargs)
@@ -97,6 +162,19 @@ TAG_CLASS_MAPPING = {
     6: DmrContent,
     8: DmSysObject,
     9: DmDocument,
+    10: DmQuery,
     11: DmFolder,
     12: DmCabinet,
+    16: DmMethod,
+    23: DmOutputDevice,
+    24: DmRouter,
+    25: DmRegistered,
+    60: DmDocbaseConfig,
+    61: DmServerConfig,
+    65: DmNote,
+    70: DmPolicy,
+    75: DmProcess,
+    76: DmActivity,
+    88: DmiExprCode,
+    103: DmPlugin,
 }
