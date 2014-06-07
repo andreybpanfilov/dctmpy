@@ -103,15 +103,6 @@ class PersistentCollection(Collection):
     def _need_read_type(self):
         return False
 
-    def next_record(self):
-        return super(PersistentCollection, self).next_record()
-
-    def __getattr__(self, name):
-        return super(PersistentCollection, self).__getattr__(name)
-
-    def __setattr__(self, name, value):
-        super(PersistentCollection, self).__setattr__(name, value)
-
 
 class CollectionEntry(TypedObject):
     def __init__(self, **kwargs):
@@ -124,18 +115,6 @@ class CollectionEntry(TypedObject):
         super(CollectionEntry, self)._read(buf)
         if self.serversion > 0:
             self._read_int()
-
-    def __getattr__(self, name):
-        if name in CollectionEntry.attributes:
-            return self.__getattribute__(ATTRIBUTE_PREFIX + name)
-        else:
-            return super(CollectionEntry, self).__getattr__(name)
-
-    def __setattr__(self, name, value):
-        if name in CollectionEntry.attributes:
-            CollectionEntry.__setattr__(self, ATTRIBUTE_PREFIX + name, value)
-        else:
-            super(CollectionEntry, self).__setattr__(name, value)
 
 
 class PersistentCollectionEntry(CollectionEntry):
@@ -150,9 +129,3 @@ class PersistentCollectionEntry(CollectionEntry):
         super(PersistentCollectionEntry, self)._read(buf)
         if self.serversion > 0:
             self._read_int()
-
-    def __getattr__(self, name):
-        return super(PersistentCollectionEntry, self).__getattr__(name)
-
-    def __setattr__(self, name, value):
-        super(PersistentCollectionEntry, self).__setattr__(name, value)
