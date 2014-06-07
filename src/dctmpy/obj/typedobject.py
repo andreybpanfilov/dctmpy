@@ -266,9 +266,7 @@ class TypedObject(object):
         return Decimal(self._next_string())
 
     def __getattr__(self, name):
-        if name in self.__attrs:
-            return self.__attrs[name]
-        elif name in TypedObject.attributes:
+        if name in TypedObject.attributes:
             return self.__getattribute__(ATTRIBUTE_PREFIX + name)
         else:
             raise AttributeError("Unknown attribute %s in %s" % (name, str(self.__class__)))

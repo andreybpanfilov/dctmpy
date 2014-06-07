@@ -109,6 +109,12 @@ class Rpc(object):
         return obj
 
     @staticmethod
+    def exec_sql(session, query):
+        obj = TypedObject(session=session)
+        obj.add(AttrValue(name="QUERY", type=STRING, values=[query]))
+        return obj
+
+    @staticmethod
     def _folder_by_path_request(session, path):
         obj = TypedObject(session=session)
         obj.add(AttrValue(name="_FOLDER_PATH_", type=STRING, values=[path]))
@@ -246,4 +252,58 @@ class Rpc(object):
     def encrypt_text(session, password):
         obj = TypedObject(session=session)
         obj.add(AttrValue(name="TEXT_TO_ENCRYPT", type=STRING, values=[session.obfuscate(password)]))
+        return obj
+
+    @staticmethod
+    def allow_base_as_features(session, allow=True):
+        obj = TypedObject(session=session)
+        obj.add(AttrValue(name="VALUE", type=BOOL, values=[allow]))
+        return obj
+
+    @staticmethod
+    def allow_base_type_changes(session, allow=True):
+        obj = TypedObject(session=session)
+        obj.add(AttrValue(name="ALLOW_CHANGE_FLAG", type=BOOL, values=[allow]))
+        return obj
+
+    @staticmethod
+    def audit_on(session, event):
+        obj = TypedObject(session=session)
+        obj.add(AttrValue(name="EVENT", type=STRING, values=[event]))
+        return obj
+
+    @staticmethod
+    def acl_obj_get_permit(session, accessor):
+        obj = TypedObject(session=session)
+        if not is_empty(accessor):
+            obj.add(AttrValue(name="_ACC_NAME_", type=STRING, values=[accessor]))
+        return obj
+
+    @staticmethod
+    def acl_obj_get_x_permit(session, accessor):
+        obj = TypedObject(session=session)
+        if not is_empty(accessor):
+            obj.add(AttrValue(name="_ACC_NAME_", type=STRING, values=[accessor]))
+        return obj
+
+    @staticmethod
+    def dump_cache(session, tag):
+        obj = TypedObject(session=session)
+        obj.add(AttrValue(name="TAG", type=INT, values=[tag]))
+        return obj
+
+    @staticmethod
+    def server_dir(session, path, dirs=True, files=True, links=True):
+        obj = TypedObject(session=session)
+        obj.add(AttrValue(name="DIRECTORY", type=STRING, values=[path]))
+        obj.add(AttrValue(name="LIST_DIR", type=BOOL, values=[dirs]))
+        obj.add(AttrValue(name="LIST_FILE", type=BOOL, values=[files]))
+        obj.add(AttrValue(name="LIST_LINK", type=BOOL, values=[links]))
+        return obj
+
+    @staticmethod
+    def set_options(session, option, value=True):
+        obj = TypedObject(session=session)
+        obj.add(AttrValue(name="OPTION", type=STRING, values=[option]))
+        obj.add(AttrValue(name="VALUE", type=BOOL, values=[value]))
         return obj
