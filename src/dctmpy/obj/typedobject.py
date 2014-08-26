@@ -8,12 +8,12 @@ from dctmpy import *
 
 
 class TypedObject(object):
-    attributes = ['session', 'type', 'buffer', 'serversion', 'iso8601time']
+    attributes = ['session', 'type', 'buffer', 'serversion', 'iso8601time', 'attrs']
 
     def __init__(self, **kwargs):
         for attribute in TypedObject.attributes:
             setattr(self, attribute, kwargs.pop(attribute, None))
-        self.__attrs = {}
+        self.attrs = {}
 
         if self.serversion is None:
             self.serversion = self.session.serversion
@@ -120,7 +120,7 @@ class TypedObject(object):
         }))
 
     def add(self, value):
-        self.__attrs[value.name] = value
+        self.attrs[value.name] = value
 
     def _read_extended_attr(self):
         attr_count = self._read_int()
@@ -141,7 +141,7 @@ class TypedObject(object):
                 for i in xrange(1, self._read_int()):
                     result.append(self._read_attr_value(attr_type))
 
-            self.__attrs[attr_name] = AttrValue(**{
+            self.attrs[attr_name] = AttrValue(**{
                 'name': attr_name,
                 'type': attr_type,
                 'length': length,
@@ -196,8 +196,8 @@ class TypedObject(object):
         result += "OBJ NULL 0 "
         if self.serversion > 0:
             result += "0 0\n0\n"
-        result += "%d\n" % len(self.__attrs)
-        for attr_value in self.__attrs.values():
+        result += "%d\n" % len(self.attrs)
+        for attr_value in self.attrs.values():
             result += "%s %s %s %d\n" % (
                 attr_value.name, attr_value.type, [SINGLE, REPEATING][attr_value.repeating],
                 attr_value.length)
@@ -294,14 +294,14 @@ class TypedObject(object):
             super(TypedObject, self).__setattr__(name, value)
 
     def __len__(self):
-        return len(self.__attrs)
+        return len(self.attrs)
 
     def __contains__(self, key):
-        return key in self.__attrs
+        return key in self.attrs
 
     def __getitem__(self, key):
-        if key in self.__attrs:
-            attr_value = self.__attrs[key]
+        if key in self.attrs:
+            attr_value = self.attrs[key]
             if attr_value.repeating:
                 return attr_value.values
             else:
@@ -310,8 +310,8 @@ class TypedObject(object):
             raise KeyError("invalid key \"%s\"" % key)
 
     def __setitem__(self, key, value):
-        if key in self.__attrs:
-            attr_value = self.__attrs[key]
+        if key in self.attrs:
+            attr_value = self.attrs[key]
             if attr_value.repeating:
                 if value is None:
                     attr_value.values = []
@@ -337,4 +337,4 @@ class TypedObject(object):
             raise KeyError
 
     def __iter__(self):
-        return iter(self.__attrs.keys())
+        return iter(self.attrs.keys())

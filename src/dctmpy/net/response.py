@@ -1,6 +1,6 @@
-#  Copyright (c) 2013 Andrey B. Panfilov <andrew@panfilov.tel>
+# Copyright (c) 2013 Andrey B. Panfilov <andrew@panfilov.tel>
 #
-#  See main module for license.
+# See main module for license.
 #
 
 from dctmpy.net import *
@@ -16,27 +16,8 @@ class Response(object):
         if self.message is None:
             raise ProtocolException("Response undefined")
 
-        message = array.array('B')
-        message.extend(self.message)
-        self.data = []
-
-        self._deserialize()
-
-    def _deserialize(self):
-        while len(self.message) > 0:
-            if self.message[0] == INTEGER_START:
-                self.data.append(self._read_integer())
-            elif self.message[0] == EMPTY_STRING_START and self.message[0] == NULL_BYTE:
-                self.data.append(self._read_string())
-            elif self.message[0] == STRING_START:
-                self.data.append(self._read_string())
-            elif self.message[0] == STRING_ARRAY_START and self.message[1] == 0x80:
-                self.data.append(self._read_string())
-            elif self.message[0] == INT_ARRAY_START:
-                self.data.append(self._read_integer_array())
-
     def _read_string(self):
-        return read_string(self.message)
+        return str(read_string(self.message))
 
     def _read_integer(self):
         return read_integer(self.message)
@@ -45,13 +26,19 @@ class Response(object):
         return read_integer_array(self.message)
 
     def next(self):
-        if len(self.data) > 0:
-            return self.data.pop(0)
-        return None
-
-    def last(self):
-        if len(self.data) > 0:
-            return self.data.pop()
+        if len(self.message) > 0:
+            if self.message[-1] == INTEGER_START:
+                return self._read_integer()
+            elif self.message[-1] == EMPTY_STRING_START and self.message[-2] == NULL_BYTE:
+                return self._read_string()
+            elif self.message[-1] == STRING_START:
+                return self._read_string()
+            elif self.message[-1] == STRING_ARRAY_START and self.message[-2] == 0x80:
+                return self._read_string()
+            elif self.message[-1] == INT_ARRAY_START:
+                return self._read_integer_array()
+            else:
+                raise RuntimeError("Unknown sequence")
         return None
 
     def __getattr__(self, name):

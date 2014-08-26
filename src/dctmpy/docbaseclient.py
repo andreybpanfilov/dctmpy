@@ -1,6 +1,6 @@
-#  Copyright (c) 2013 Andrey B. Panfilov <andrew@panfilov.tel>
+# Copyright (c) 2013 Andrey B. Panfilov <andrew@panfilov.tel>
 #
-#  See main module for license.
+# See main module for license.
 #
 import logging
 
@@ -153,9 +153,18 @@ class DocbaseClient(Netwise):
             data = response.next()
             if length == 0:
                 raise RuntimeError("Puller is closed")
-            if length != len(data):
-                raise RuntimeError("Invalid content size")
-            yield data
+            if isinstance(data, list):
+                l = 0
+                for chunk in data:
+                    l += len(chunk)
+                if length != l:
+                    raise RuntimeError("Invalid content size")
+                for chunk in data:
+                    yield chunk
+            else:
+                if length != len(data):
+                    raise RuntimeError("Invalid content size")
+                yield data
             if last:
                 break
             i += 1
@@ -171,7 +180,6 @@ class DocbaseClient(Netwise):
 
         response = self.request(Request, type=rpc_id, data=data, immediate=True).receive()
         message = response.next()
-        o_data = response.last()
         if rpc_id == RPC_APPLY_FOR_OBJECT:
             valid = int(response.next()) > 0
             persistent = int(response.next()) > 0
@@ -190,6 +198,7 @@ class DocbaseClient(Netwise):
             valid = int(response.next()) > 0
         else:
             valid = int(response.next()) > 0
+        o_data = response.next()
 
         if (o_data & 0x02 != 0) and not self.readingmessages:
             try:
@@ -198,7 +207,7 @@ class DocbaseClient(Netwise):
             finally:
                 self.readingmessages = False
 
-        #TODO in some cases (e.g. AUTHENTICATE_USER) CS returns both OBDATA and RESULT
+        # TODO in some cases (e.g. AUTHENTICATE_USER) CS returns both OBDATA and RESULT
         if o_data & 0x02 != 0 and len(self.messages) > 0:
             reason = self._get_message(3)
             if len(reason) > 0:
@@ -248,6 +257,9 @@ class DocbaseClient(Netwise):
                 cls = PersistentCollection
             elif cls == TypedObject:
                 cls = PersistentProxy
+
+        if is_empty(data):
+            return None
 
         result = cls(session=self, buffer=data)
         if response.collecton is not None and isinstance(result, Collection):
@@ -327,8 +339,14 @@ class DocbaseClient(Netwise):
         collection = self.query("select r_object_id from %s" % qualification)
         record = collection.next_record()
         if record:
-            return self.fetch(record['r_object_id'])
+            return self.get_object(record['r_object_id'])
         return None
+
+    def get_object(self, objectid):
+        obj = self.fetch(objectid)
+        if obj is None:
+            raise RuntimeError("Unable to fetch object with id %s" % objectid)
+        return obj
 
     def get_type(self, name, vstamp=0):
         type_obj = get_type_from_cache(name)

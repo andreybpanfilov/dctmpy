@@ -446,7 +446,7 @@ class CheckDocbase(Resource):
                     self.add_result(Critical, message)
                 else:
                     try:
-                        jmsconfig = self.session.fetch(config['jms_config_id'][i])
+                        jmsconfig = self.session.get_object(config['jms_config_id'][i])
                         for i in xrange(0, len(jmsconfig['servlet_name'])):
                             name = jmsconfig['servlet_name'][i]
                             url = jmsconfig['base_uri'][i]
@@ -473,7 +473,7 @@ class CheckDocbase(Resource):
             for rec in get_acs_configs(self.session):
                 count += 1
                 try:
-                    acs = self.session.fetch(rec['r_object_id'])
+                    acs = self.session.get_object(rec['r_object_id'])
                     for url in acs['acs_base_url']:
                         self.check_app_server('acs', url)
                 except Exception, e:
@@ -493,7 +493,7 @@ class CheckDocbase(Resource):
             for rec in get_xplore_configs(self.session):
                 count += 1
                 try:
-                    xplore = self.session.fetch(rec['r_object_id'])
+                    xplore = self.session.get_object(rec['r_object_id'])
                     prop = dict(zip(xplore['param_name'], xplore['param_value']))
                     url = "%s://%s:%s%s" % (
                         prop['dsearch_qrserver_protocol'].lower(),

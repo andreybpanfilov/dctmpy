@@ -1,12 +1,13 @@
-#  Copyright (c) 2013 Andrey B. Panfilov <andrew@panfilov.tel>
+# Copyright (c) 2013 Andrey B. Panfilov <andrew@panfilov.tel>
 #
-#  See main module for license.
+# See main module for license.
 #
 
 from dctmpy.net import *
 from dctmpy.net.response import Response, DownloadResponse
 
 HEADER_SIZE = 4
+BUFFER_SIZE = 65536
 
 
 class Request(object):
@@ -41,21 +42,22 @@ class Request(object):
         return self._receive(Response)
 
     def _receive(self, cls):
-        message_payload = array.array('B')
-        message_payload.fromstring(self.socket.recv(HEADER_SIZE))
-        if len(message_payload) == 0:
+        message = bytearray(self.socket.recv(max(BUFFER_SIZE, HEADER_SIZE + 2)))
+        if len(message) < HEADER_SIZE + 2:
             raise ProtocolException("Unable to read header")
 
         message_length = 0
         for i in xrange(0, HEADER_SIZE):
-            message_length = message_length << 8 | message_payload[i]
+            message_length = message_length << 8 | message[i]
 
-        header_payload = string_to_integer_array(self.socket.recv(2))
-        if header_payload[0] != PROTOCOL_VERSION:
-            raise ProtocolException("Wrong protocol 0x%X expected 0x%X" % (header_payload[0], PROTOCOL_VERSION))
-        header_length = header_payload[1]
+        if message[HEADER_SIZE] != PROTOCOL_VERSION:
+            raise ProtocolException("Wrong protocol 0x%X expected 0x%X" % (message[HEADER_SIZE], PROTOCOL_VERSION))
+        header_length = message[HEADER_SIZE + 1]
 
-        header = string_to_integer_array(self.socket.recv(header_length))
+        while len(message) < HEADER_SIZE + 2 + header_length:
+            message.extend(self.socket.recv(BUFFER_SIZE))
+
+        header = message[HEADER_SIZE + 1 + header_length:HEADER_SIZE + 1:-1]
 
         sequence = read_integer(header)
         if sequence != self.sequence:
@@ -65,38 +67,40 @@ class Request(object):
         if status != 0:
             raise ProtocolException("Bad status: 0x%X" % status)
 
-        bytes_to_read = message_length - len(header_payload) - header_length
-        message = array.array('B')
-        while True:
-            chunk = string_to_integer_array(self.socket.recv(bytes_to_read))
+        del message[:(HEADER_SIZE + 2 + header_length)]
+        bytes_to_read = message_length - len(message) - header_length - 2
+        while bytes_to_read > 0:
+            chunk = bytearray(self.socket.recv(bytes_to_read))
+            bytes_to_read -= len(chunk)
             message.extend(chunk)
-            if len(chunk) == 0 or len(message) == bytes_to_read:
+            if len(chunk) == 0:
                 break
-
+        message.reverse()
         return cls(**{
             'message': message
         })
 
     def _build_request(self):
-        data = self._build_header()
+        data = bytearray(4)
+        data.extend(self._build_header())
         if self.data:
             data.extend(self.data)
-        length = len(data)
-        data.insert(0, length & 0x000000ff)
-        data.insert(0, (length >> 8) & 0x000000ff)
-        data.insert(0, (length >> 16) & 0x000000ff)
-        data.insert(0, (length >> 24) & 0x000000ff)
+        length = len(data) - 4
+        data[3] = length & 0x000000ff
+        data[2] = (length >> 8) & 0x000000ff
+        data[1] = (length >> 16) & 0x000000ff
+        data[0] = (length >> 24) & 0x000000ff
         return data
 
     def _build_header(self):
-        header = array.array('B')
+        header = bytearray(2)
         header.extend(serialize_integer(self.sequence))
         header.extend(serialize_integer(self.type))
         header.extend(serialize_integer(self.version))
         header.extend(serialize_integer(self.release))
         header.extend(serialize_integer(self.inumber))
-        header.insert(0, len(header))
-        header.insert(0, PROTOCOL_VERSION)
+        header[1] = len(header) - 2
+        header[0] = PROTOCOL_VERSION
         return header
 
     def __getattr__(self, name):

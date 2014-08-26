@@ -54,7 +54,7 @@ class DmSysObject(Persistent):
         if fmt is None:
             fmt = self[A_CONTENT_TYPE]
         objectId = self.object_id()
-        content = self.session.fetch(self.session.convert_id(objectId, fmt, page, page_modifier))
+        content = self.session.get_object(self.session.convert_id(objectId, fmt, page, page_modifier))
         for chunk in content.get_content(objectId):
             yield chunk
 

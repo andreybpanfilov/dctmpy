@@ -1,9 +1,9 @@
-#  Copyright (c) 2013 Andrey B. Panfilov <andrew@panfilov.tel>
+# Copyright (c) 2013 Andrey B. Panfilov <andrew@panfilov.tel>
 #
-#  Permission is hereby granted, free of charge, to any person obtaining
-#  a copy of this software and associated documentation files (the
-#  "Software"), to deal in the Software without restriction, including
-#  without limitation the rights to use, copy, modify, merge, publish,
+# Permission is hereby granted, free of charge, to any person obtaining
+# a copy of this software and associated documentation files (the
+# "Software"), to deal in the Software without restriction, including
+# without limitation the rights to use, copy, modify, merge, publish,
 #  distribute, sublicense, and/or sell copies of the Software, and to
 #  permit persons to whom the Software is furnished to do so, subject to
 #  the following conditions:
@@ -23,7 +23,6 @@
 #
 
 
-import array
 import locale
 import platform
 import re
@@ -277,28 +276,6 @@ def get_offset_in_seconds():
     return int(time.mktime(time.gmtime(t)) - time.mktime(time.localtime(t)))
 
 
-def string_to_integer_array(string):
-    b = array.array("B")
-    b.fromstring(string)
-    return b.tolist()
-
-
-def integer_array(data):
-    b = array.array("B")
-    if is_empty(data):
-        return b
-    if isinstance(data[0], int):
-        b.extend(data)
-    else:
-        for d in data:
-            b.extend(d)
-    return b
-
-
-def integer_array_to_string(data):
-    return integer_array(data).tostring()
-
-
 def is_empty(value):
     if value is None:
         return True
@@ -309,6 +286,8 @@ def is_empty(value):
             return True
         else:
             return False
+    if isinstance(value, bytearray):
+        return is_empty(str(value))
     if isinstance(value, list):
         if len(value) == 0:
             return True
