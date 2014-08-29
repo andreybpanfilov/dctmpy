@@ -1,6 +1,6 @@
-#  Copyright (c) 2013 Andrey B. Panfilov <andrew@panfilov.tel>
+# Copyright (c) 2013 Andrey B. Panfilov <andrew@panfilov.tel>
 #
-#  See main module for license.
+# See main module for license.
 #
 
 from dctmpy import *
@@ -65,18 +65,6 @@ class Collection(TypedObject):
                     return r
 
         return iterator(self)
-
-    def __getattr__(self, name):
-        if name in Collection.attributes:
-            return self.__getattribute__(ATTRIBUTE_PREFIX + name)
-        else:
-            return super(Collection, self).__getattr__(name)
-
-    def __setattr__(self, name, value):
-        if name in Collection.attributes:
-            Collection.__setattr__(self, ATTRIBUTE_PREFIX + name, value)
-        else:
-            super(Collection, self).__setattr__(name, value)
 
     def close(self):
         if self.collection >= 0:

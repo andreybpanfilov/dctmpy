@@ -57,27 +57,24 @@ class Request(object):
         while len(message) < HEADER_SIZE + 2 + header_length:
             message.extend(self.socket.recv(BUFFER_SIZE))
 
-        header = message[HEADER_SIZE + 1 + header_length:HEADER_SIZE + 1:-1]
-
-        sequence = read_integer(header)
+        (sequence, offset) = read_integer(message, HEADER_SIZE + 2)
         if sequence != self.sequence:
             raise ProtocolException("Invalid sequence %d expected %d" % (sequence, self.sequence))
 
-        status = read_integer(header)
+        (status, offset) = read_integer(message, offset)
         if status != 0:
             raise ProtocolException("Bad status: 0x%X" % status)
 
-        del message[:(HEADER_SIZE + 2 + header_length)]
-        bytes_to_read = message_length - len(message) - header_length - 2
+        bytes_to_read = message_length - len(message) + HEADER_SIZE
         while bytes_to_read > 0:
             chunk = bytearray(self.socket.recv(bytes_to_read))
             bytes_to_read -= len(chunk)
             message.extend(chunk)
             if len(chunk) == 0:
                 break
-        message.reverse()
         return cls(**{
-            'message': message
+            'message': message,
+            'offset': offset
         })
 
     def _build_request(self):
@@ -102,18 +99,6 @@ class Request(object):
         header[1] = len(header) - 2
         header[0] = PROTOCOL_VERSION
         return header
-
-    def __getattr__(self, name):
-        if name in Request.attributes:
-            return self.__getattribute__(ATTRIBUTE_PREFIX + name)
-        else:
-            return AttributeError("Unknown attribute %s in %s" % (name, str(self.__class__)))
-
-    def __setattr__(self, name, value):
-        if name in Request.attributes:
-            Request.__setattr__(self, ATTRIBUTE_PREFIX + name, value)
-        else:
-            super(Request, self).__setattr__(name, value)
 
 
 class DownloadRequest(Request):

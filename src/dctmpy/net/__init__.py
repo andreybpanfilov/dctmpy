@@ -126,92 +126,80 @@ def serialize_data(data=None):
     return result
 
 
-def read_integer(data):
-    if len(data) < 3:
-        raise RuntimeError("Wrong sequence, at least 3 bytes required, got: %d" % len(data))
-
-    (header, length, value) = data[-1:-4:-1]
+def read_integer(data, offset=0):
+    (header, length, value) = (data[offset], data[offset + 1], data[offset + 2])
     if header != INTEGER_START:
         raise RuntimeError("Wrong sequence for integer: 0x%X" % header)
+    if value > 0x7f:
+        value = ~value ^ 0xff
+    if length > 1:
+        value = value << 8 | data[3 + offset]
+    if length > 2:
+        value = value << 8 | data[4 + offset]
+    if length > 3:
+        value = value << 8 | data[5 + offset]
+    if value > 0x7fffffff:
+        value = ~value ^ 0xffffffff
+    return value, offset + 2 + length
 
-    if len(data) < length + 2:
-        raise RuntimeError("Wrong sequence, at least %d bytes required, got: %d" % (length + 2, len(data)))
 
-    value -= (value & 0x80) << 1
-    for i in xrange(1, length):
-        value = value << 8 | data[-3 - i]
-        if value > 0x7fffffff:
-            value = value - 0xffffffff - 1
-    del data[-length - 2:]
-    return value
-
-
-def read_length(data):
-    if len(data) < 1:
-        raise RuntimeError("Wrong sequence, at least 1 byte required, got: %d" % len(data))
-
-    value = data.pop()
-
+def read_length(data, offset=0):
+    value = data[offset]
+    offset += 1
     if value <= 127:
-        return value
-
+        return value, offset
     length = value & 0x7F
-
-    if len(data) < length:
-        raise RuntimeError("Wrong sequence, %d bytes required, got: %d" % (length, len(data)))
-
-    value = data[-1]
-    for i in xrange(1, length):
-        value = value << 8 | data[-1 - i]
-        if value > 0x7fffffff:
-            value = value - 0xffffffff - 1
-    del data[-length:]
-    return value
+    value = data[offset]
+    if length > 1:
+        value = value << 8 | data[1 + offset]
+    if length > 2:
+        value = value << 8 | data[2 + offset]
+    if length > 3:
+        value = value << 8 | data[3 + offset]
+    return value, offset + length
 
 
-def read_integer_array(data):
-    header = data.pop()
+def read_integer_array(data, offset=0):
+    header = data[offset]
+    offset += 1
     if header != INT_ARRAY_START:
         raise RuntimeError("Wrong sequence for integer array: 0x%X" % header)
 
-    length = read_length(data)
-    stop = len(data) - length
+    (length, offset) = read_length(data, offset)
+    stop = offset + length
     result = []
-    while len(data) > stop:
-        result.append(read_integer(data))
-    return result
+    while stop > offset:
+        (chunk, offset) = read_integer(data, offset)
+        result.append(chunk)
+    return result, offset
 
 
-def read_array(data, asstring=False):
-    sequence = data[-1]
-    if sequence == EMPTY_STRING_START and data[-2] == NULL_BYTE:
-        del data[-2:]
-        return bytearray()
+def read_array(data, offset=0, asstring=False):
+    sequence = data[offset]
+    if sequence == EMPTY_STRING_START and data[1 + offset] == NULL_BYTE:
+        return bytearray(), offset + 2
     elif sequence == STRING_START:
-        del data[-1:]
-        length = read_length(data)
-        if asstring and data[-length] == NULL_BYTE:
-            result = data[-length + 1:]
+        (length, offset) = read_length(data, offset + 1)
+        if asstring and data[offset + length - 1] == NULL_BYTE:
+            result = data[offset: offset + length - 1]
         else:
-            result = data[-length:]
-        del data[-length:]
-        result.reverse()
-        return result
-    elif sequence == STRING_ARRAY_START and data[-2] == 0x80:
-        del data[-2:]
+            result = data[offset: offset + length]
+        return result, offset + length
+    elif sequence == STRING_ARRAY_START and data[1 + offset] == 0x80:
+        offset += 2
         result = bytearray()
-        while data[-1] != NULL_BYTE or data[-2] != NULL_BYTE:
-            result.extend(read_array(data, asstring))
-        del data[-2:]
-        return result
+        while data[offset] != NULL_BYTE or data[offset + 1] != NULL_BYTE:
+            (chunk, offset) = read_array(data, offset, asstring)
+            result.extend(chunk)
+        return result, offset + 2
     raise RuntimeError("Unknown sequence: 0x%X" % sequence)
 
 
-def read_string(data):
-    return read_array(data, True)
+def read_string(data, offset=0):
+    return read_array(data, offset, True)
 
 
-def read_binary(data):
-    return read_array(data, False)
+def read_binary(data, offset=0):
+    return read_array(data, offset, False)
 
 

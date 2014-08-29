@@ -1,16 +1,14 @@
-#  Copyright (c) 2013 Andrey B. Panfilov <andrew@panfilov.tel>
+# Copyright (c) 2013 Andrey B. Panfilov <andrew@panfilov.tel>
 #
-#  See main module for license.
+# See main module for license.
 #
 
 import socket
 import ssl
 
-from dctmpy import *
-
 
 class Netwise(object):
-    attributes = ['version', 'release', 'inumber', 'sequence', 'sockopts']
+    attributes = ['version', 'release', 'inumber', 'sequence', 'sockopts', 'socket']
 
     def __init__(self, **kwargs):
         for attribute in Netwise.attributes:
@@ -19,10 +17,10 @@ class Netwise(object):
             self.sockopts = kwargs
         if self.sequence is None:
             self.sequence = 0
-        self.__socket = None
+        self.socket = None
 
     def _connected(self):
-        if not self.__socket:
+        if not self.socket:
             return False
         return True
 
@@ -34,21 +32,21 @@ class Netwise(object):
                 secure = self.sockopts.get('secure', False)
                 if not host or not (port > -1):
                     raise RuntimeError("Invalid host or port")
-                self.__socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 if secure:
-                    self.__socket = ssl.wrap_socket(self.__socket)
-                self.__socket.connect((host, port))
+                    self.socket = ssl.wrap_socket(self.socket)
+                self.socket.connect((host, port))
             except:
-                self.__socket = None
+                self.socket = None
                 raise
-        return self.__socket
+        return self.socket
 
     def disconnect(self):
         try:
             if self._connected():
-                self.__socket.close()
+                self.socket.close()
         finally:
-            self.__socket = None
+            self.socket = None
 
     def __del__(self):
         self.disconnect()
@@ -62,15 +60,4 @@ class Netwise(object):
             'inumber': self.inumber,
         }))
 
-    def __getattr__(self, name):
-        if name in Netwise.attributes:
-            return self.__getattribute__(ATTRIBUTE_PREFIX + name)
-        else:
-            raise AttributeError("Unknown attribute %s in %s" % (name, str(self.__class__)))
-
-    def __setattr__(self, name, value):
-        if name in Netwise.attributes:
-            Netwise.__setattr__(self, ATTRIBUTE_PREFIX + name, value)
-        else:
-            super(Netwise, self).__setattr__(name, value)
 

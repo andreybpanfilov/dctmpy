@@ -1,6 +1,6 @@
-#  Copyright (c) 2013 Andrey B. Panfilov <andrew@panfilov.tel>
+# Copyright (c) 2013 Andrey B. Panfilov <andrew@panfilov.tel>
 #
-#  See main module for license.
+# See main module for license.
 #
 from decimal import Decimal
 
@@ -13,7 +13,9 @@ class TypedObject(object):
     def __init__(self, **kwargs):
         for attribute in TypedObject.attributes:
             setattr(self, attribute, kwargs.pop(attribute, None))
-        self.attrs = {}
+
+        if self.attrs is None:
+            self.attrs = {}
 
         if self.serversion is None:
             self.serversion = self.session.serversion
@@ -280,18 +282,6 @@ class TypedObject(object):
 
     def _read_double(self):
         return Decimal(self._next_string())
-
-    def __getattr__(self, name):
-        if name in TypedObject.attributes:
-            return self.__getattribute__(ATTRIBUTE_PREFIX + name)
-        else:
-            raise AttributeError("Unknown attribute %s in %s" % (name, str(self.__class__)))
-
-    def __setattr__(self, name, value):
-        if name in TypedObject.attributes:
-            TypedObject.__setattr__(self, ATTRIBUTE_PREFIX + name, value)
-        else:
-            super(TypedObject, self).__setattr__(name, value)
 
     def __len__(self):
         return len(self.attrs)

@@ -262,7 +262,7 @@ class DocbaseClient(Netwise):
             return None
 
         result = cls(session=self, buffer=data)
-        if response.collecton is not None and isinstance(result, Collection):
+        if response.collection is not None and isinstance(result, Collection):
             result.collection = response.collection
             result.persistent = response.persistent
             result.records = response.records
@@ -386,17 +386,6 @@ class DocbaseClient(Netwise):
             raise RuntimeError("Unknown method: %s" % name)
         return self.entrypoints[name]
 
-    def __getattr__(self, name):
-        if name in DocbaseClient.attributes:
-            return self.__getattribute__(ATTRIBUTE_PREFIX + name)
-        else:
-            return super(DocbaseClient, self).__getattr__(name)
-
-    def __setattr__(self, name, value):
-        if name in DocbaseClient.attributes:
-            DocbaseClient.__setattr__(self, ATTRIBUTE_PREFIX + name, value)
-        else:
-            super(DocbaseClient, self).__setattr__(name, value)
 
     def _add_entry_point(self, name):
         func = pep_name(name)
@@ -441,17 +430,4 @@ class Response(object):
     def __init__(self, **kwargs):
         for attribute in Response.attributes:
             setattr(self, attribute, kwargs.pop(attribute, None))
-
-    def __getattr__(self, name):
-        if name in Response.attributes:
-            return self.__getattribute__(ATTRIBUTE_PREFIX + name)
-        else:
-            return AttributeError("Unknown attribute %s in %s" % (name, str(self.__class__)))
-
-    def __setattr__(self, name, value):
-        if name in Response.attributes:
-            Response.__setattr__(self, ATTRIBUTE_PREFIX + name, value)
-        else:
-            super(Response, self).__setattr__(name, value)
-
 

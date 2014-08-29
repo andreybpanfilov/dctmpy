@@ -1,6 +1,6 @@
-#  Copyright (c) 2013 Andrey B. Panfilov <andrew@panfilov.tel>
+# Copyright (c) 2013 Andrey B. Panfilov <andrew@panfilov.tel>
 #
-#  See main module for license.
+# See main module for license.
 #
 
 from dctmpy.obj.typedobject import TypedObject
@@ -15,18 +15,6 @@ class Rpc(object):
         self.method = method
         self.returntype = returntype
         self.needid = needid
-
-    def __getattr__(self, name):
-        if name in Rpc.attributes:
-            return self.__getattribute__(ATTRIBUTE_PREFIX + name)
-        else:
-            return AttributeError("Unknown attribute %s in %s" % (name, str(self.__class__)))
-
-    def __setattr__(self, name, value):
-        if name in Rpc.attributes:
-            Rpc.__setattr__(self, ATTRIBUTE_PREFIX + name, value)
-        else:
-            super(Rpc, self).__setattr__(name, value)
 
     @staticmethod
     def set_locale(session, charset=get_charset_id()):

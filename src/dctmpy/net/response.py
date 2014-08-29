@@ -7,7 +7,7 @@ from dctmpy.net import *
 
 
 class Response(object):
-    attributes = ['message', 'data']
+    attributes = ['message', 'offset']
 
     def __init__(self, **kwargs):
         for attribute in Response.attributes:
@@ -17,41 +17,33 @@ class Response(object):
             raise ProtocolException("Response undefined")
 
     def _read_string(self):
-        return str(read_string(self.message))
+        (result, self.offset) = read_string(self.message, self.offset)
+        return str(result)
 
     def _read_integer(self):
-        return read_integer(self.message)
+        (result, self.offset) = read_integer(self.message, self.offset)
+        return result
 
     def _read_integer_array(self):
-        return read_integer_array(self.message)
+        (result, self.offset) = read_integer_array(self.message, self.offset)
+        return result
 
     def next(self):
-        if len(self.message) > 0:
-            if self.message[-1] == INTEGER_START:
-                return self._read_integer()
-            elif self.message[-1] == EMPTY_STRING_START and self.message[-2] == NULL_BYTE:
-                return self._read_string()
-            elif self.message[-1] == STRING_START:
-                return self._read_string()
-            elif self.message[-1] == STRING_ARRAY_START and self.message[-2] == 0x80:
-                return self._read_string()
-            elif self.message[-1] == INT_ARRAY_START:
-                return self._read_integer_array()
-            else:
-                raise RuntimeError("Unknown sequence")
-        return None
-
-    def __getattr__(self, name):
-        if name in Response.attributes:
-            return self.__getattribute__(ATTRIBUTE_PREFIX + name)
-        else:
-            return AttributeError("Unknown attribute %s in %s" % (name, str(self.__class__)))
-
-    def __setattr__(self, name, value):
-        if name in Response.attributes:
-            Response.__setattr__(self, ATTRIBUTE_PREFIX + name, value)
-        else:
-            super(Response, self).__setattr__(name, value)
+        if len(self.message) <= self.offset:
+            return None
+        seq1 = self.message[self.offset]
+        seq2 = self.message[1 + self.offset]
+        if seq1 == INTEGER_START:
+            return self._read_integer()
+        if seq1 == EMPTY_STRING_START and seq2 == NULL_BYTE:
+            return self._read_string()
+        if seq1 == STRING_START:
+            return self._read_string()
+        if seq1 == STRING_ARRAY_START and seq2 == 0x80:
+            return self._read_string()
+        if seq1 == INT_ARRAY_START:
+            return self._read_integer_array()
+        raise RuntimeError("Unknown sequence")
 
 
 class DownloadResponse(Response):
@@ -59,4 +51,5 @@ class DownloadResponse(Response):
         super(DownloadResponse, self).__init__(**kwargs)
 
     def _read_string(self):
-        return read_binary(self.message)
+        (result, self.offset) = read_binary(self.message, self.offset)
+        return result

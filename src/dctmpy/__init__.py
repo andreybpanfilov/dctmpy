@@ -4,12 +4,12 @@
 # a copy of this software and associated documentation files (the
 # "Software"), to deal in the Software without restriction, including
 # without limitation the rights to use, copy, modify, merge, publish,
-#  distribute, sublicense, and/or sell copies of the Software, and to
-#  permit persons to whom the Software is furnished to do so, subject to
-#  the following conditions:
+# distribute, sublicense, and/or sell copies of the Software, and to
+# permit persons to whom the Software is furnished to do so, subject to
+# the following conditions:
 #
-#  The above copyright notice and this permission notice shall be
-#  included in all copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
 #
 #  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 #  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -222,8 +222,6 @@ CLIENT_VERSION_ARRAY = [
 
 DEFAULT_BATCH_SIZE = 20
 
-ATTRIBUTE_PREFIX = "__"
-
 ISO8601_REGEXP = "^([0-9]){4}(-([0-9]){2}){2}T([0-9]{2}:){2}([0-9]){2}Z"
 
 
@@ -405,19 +403,7 @@ class AttrInfo(object):
             setattr(self, attribute, kwargs.pop(attribute, None))
 
     def clone(self):
-        return AttrInfo(**dict((x, self.__getattr__(x)) for x in AttrInfo.attributes))
-
-    def __getattr__(self, name):
-        if name in AttrInfo.attributes:
-            return self.__getattribute__(ATTRIBUTE_PREFIX + name)
-        else:
-            raise AttributeError("Unknown attribute %s in %s" % (name, str(self.__class__)))
-
-    def __setattr__(self, name, value):
-        if name in AttrInfo.attributes:
-            AttrInfo.__setattr__(self, ATTRIBUTE_PREFIX + name, value)
-        else:
-            super(AttrInfo, self).__setattr__(name, value)
+        return AttrInfo(**dict((x, getattr(self, x)) for x in AttrInfo.attributes))
 
 
 class AttrValue(object):
@@ -434,18 +420,6 @@ class AttrValue(object):
             self.repeating = False
         if self.length is None:
             self.length = 0
-
-    def __getattr__(self, name):
-        if name in AttrValue.attributes:
-            return self.__getattribute__(ATTRIBUTE_PREFIX + name)
-        else:
-            raise AttributeError("Unknown attribute %s in %s" % (name, str(self.__class__)))
-
-    def __setattr__(self, name, value):
-        if name in AttrValue.attributes:
-            AttrValue.__setattr__(self, ATTRIBUTE_PREFIX + name, value)
-        else:
-            super(AttrValue, self).__setattr__(name, value)
 
     def __len__(self):
         if self.repeating:
@@ -498,23 +472,10 @@ class TypeInfo(object):
 
     def __init__(self, **kwargs):
         for attribute in TypeInfo.attributes:
-            setattr(self, ATTRIBUTE_PREFIX + attribute, kwargs.pop(attribute, None))
+            setattr(self, attribute, kwargs.pop(attribute, None))
         self.attrs = []
         self.positions = {}
 
-    def __getattr__(self, name):
-        if name in TypeInfo.attributes:
-            return self.__getattribute__(ATTRIBUTE_PREFIX + name)
-        elif name == "attributes":
-            return self.attrs
-        else:
-            raise AttributeError("Unknown attribute %s in %s" % (name, str(self.__class__)))
-
-    def __setattr__(self, name, value):
-        if name in TypeInfo.attributes:
-            TypeInfo.__setattr__(self, ATTRIBUTE_PREFIX + name, value)
-        else:
-            super(TypeInfo, self).__setattr__(name, value)
 
     def append(self, attrInfo):
         self.attrs.append(attrInfo)
