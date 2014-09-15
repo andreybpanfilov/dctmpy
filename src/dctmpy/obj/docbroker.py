@@ -1,4 +1,4 @@
-#  Copyright (c) 2013 Andrey B. Panfilov <andrew@panfilov.tel>
+# Copyright (c) 2013 Andrey B. Panfilov <andrew@panfilov.tel>
 #
 #  See main module for license.
 #
@@ -54,6 +54,7 @@ class DocbrokerObject(TypedObject):
             'length': attr_length,
             'values': result,
             'repeating': repeating,
+            'extended': False,
         }))
 
 

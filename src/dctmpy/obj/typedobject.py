@@ -119,6 +119,7 @@ class TypedObject(object):
             'length': attr_length,
             'values': result,
             'repeating': repeating,
+            'extended': False,
         }))
 
     def add(self, value):
@@ -140,7 +141,7 @@ class TypedObject(object):
             if not repeating:
                 result.append(self._read_attr_value(attr_type))
             else:
-                for i in xrange(1, self._read_int()):
+                for i in xrange(0, self._read_int()):
                     result.append(self._read_attr_value(attr_type))
 
             self.attrs[attr_name] = AttrValue(**{
@@ -149,6 +150,7 @@ class TypedObject(object):
                 'length': length,
                 'values': result,
                 'repeating': repeating,
+                'extended': True,
             })
 
     def _read_attr_value(self, attr_type):
@@ -265,8 +267,14 @@ class TypedObject(object):
         return pseudo_base64_to_int(self._next_string(BASE64_PATTERN))
 
     def _read_string(self):
-        self._next_string(ENCODING_PATTERN)
-        return self._substr(self._read_int() + 1)[1:]
+        encoding = self._next_string(ENCODING_PATTERN)
+        length = self._read_int()
+        if encoding == 'H':
+            length *= 2
+        result = self._substr(length + 1)[1:]
+        if encoding == 'H':
+            return result.decode("hex")
+        return result
 
     def _read_time(self):
         value = self._next_token(CRLF_PATTERN)
@@ -328,3 +336,31 @@ class TypedObject(object):
 
     def __iter__(self):
         return iter(self.attrs.keys())
+
+    def dump(self):
+        primary = ""
+        extended = ""
+        fmt = "\n %-16s %10s: %s"
+        for attr in self.attrs:
+            value = self.attrs[attr]
+            data = ""
+            if not value.repeating:
+                data += (fmt % (attr, "", value.values[0]))
+            else:
+                count = len(value.values)
+                if count == 0:
+                    data += fmt % (attr, "[]", "<none>")
+                else:
+                    for i in xrange(0, count):
+                        if i == 0:
+                            data += (fmt % (attr, "[" + str(i) + "]", value.values[i]))
+                        else:
+                            data += (fmt % ("", "[" + str(i) + "]", value.values[i]))
+            if value.extended:
+                extended += data
+            else:
+                primary += data
+        if len(extended) == 0:
+            return "ATTRIBUTES:%s" % primary
+        return "ATTRIBUTES:%s\nEXTENDED:%s" % ( primary, extended)
+

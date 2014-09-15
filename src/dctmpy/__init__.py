@@ -407,7 +407,7 @@ class AttrInfo(object):
 
 
 class AttrValue(object):
-    attributes = ['name', 'type', 'length', 'repeating', 'values']
+    attributes = ['name', 'type', 'length', 'repeating', 'values', 'extended']
 
     def __init__(self, **kwargs):
         for attribute in AttrValue.attributes:
