@@ -468,11 +468,14 @@ class AttrValue(object):
 
 class TypeInfo(object):
     attributes = ['name', 'id', 'vstamp', 'version', 'cache', 'super', 'sharedparent', 'aspectname', 'aspectshareflag',
-                  'serversion', 'attrs', 'positions']
+                  'serversion', 'attrs', 'positions', 'pending']
 
     def __init__(self, **kwargs):
         for attribute in TypeInfo.attributes:
             setattr(self, attribute, kwargs.pop(attribute, None))
+        if self.super == 'NULL':
+            self.super = self.sharedparent
+        self.pending = self.super
         self.attrs = []
         self.positions = {}
 
@@ -503,7 +506,7 @@ class TypeInfo(object):
         return len(self.attrs)
 
     def extend(self, other):
-        if self.super == other.name:
+        if self.pending == other.name:
             for i in other.attrs[::-1]:
                 self.insert(0, i.clone())
-            self.super = other.super
+            self.pending = other.pending

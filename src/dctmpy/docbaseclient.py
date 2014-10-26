@@ -286,9 +286,11 @@ class DocbaseClient(Netwise):
                 continue
             if len(message) > 0:
                 message += ", "
-            message += self.messages[i]['NAME']
+            message += "[%s]" % self.messages[i]['NAME']
             if '1' in self.messages[i]:
-                message += ": %s" % self.messages[i]['1']
+                message += " %s" % self.messages[i]['1']
+            if '2' in self.messages[i]:
+                message += ": %s" % self.messages[i]['2']
 
         for i in xrange(len(self.messages) - 1, 1):
             if self.messages[i]['SEVERITY'] >= severity:
