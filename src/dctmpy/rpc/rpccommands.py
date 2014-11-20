@@ -295,3 +295,10 @@ class Rpc(object):
         obj.add(AttrValue(name="OPTION", type=STRING, values=[option]))
         obj.add(AttrValue(name="VALUE", type=BOOL, values=[value]))
         return obj
+
+    @staticmethod
+    def set_push_object_status(session, objectId, value):
+        obj = TypedObject(session=session)
+        obj.add(AttrValue(name="_PUSHED_ID_", type=ID, values=[objectId]))
+        obj.add(AttrValue(name="_PUSH_STATUS_", type=BOOL, values=[value]))
+        return obj

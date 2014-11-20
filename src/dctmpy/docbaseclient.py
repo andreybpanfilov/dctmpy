@@ -20,6 +20,8 @@ NETWISE_INUMBER = 769
 
 DEFAULT_CHARSET = 'UTF-8'
 
+MAX_REQUEST_LEN = 63000
+
 
 class DocbaseClient(Netwise):
     attributes = ['docbaseid', 'username', 'password', 'messages', 'entrypoints', 'serversion', 'iso8601time',
@@ -223,12 +225,26 @@ class DocbaseClient(Netwise):
         return Response(data=message, odata=o_data, persistent=persistent, collection=collection, maybemore=maybemore,
                         records=records)
 
+    def apply_chunks(self, rpc_id, object_id, method, request, cls=Collection):
+        if not object_id or object_id == NULL_ID:
+            object_id = self.session
+        self.set_push_object_status(object_id, True)
+        for part in chunks(request, MAX_REQUEST_LEN):
+            self.apply(RPC_APPLY_FOR_LONG, object_id, method, part)
+        self.set_push_object_status(object_id, False)
+        return self.apply(rpc_id, object_id, method, "_USE_SESSION_CHUNKED_OBJ_STRING_", cls)
+
     def apply(self, rpc_id, object_id, method, request=None, cls=Collection):
         if rpc_id is None:
             rpc_id = RPC_APPLY
 
         if not object_id:
             object_id = NULL_ID
+
+        if isinstance(request, TypedObject):
+            request = request.serialize()
+        if request and len(request) > MAX_REQUEST_LEN:
+            return self.apply_chunks(rpc_id, object_id, method, request, cls)
 
         response = self.rpc(rpc_id, [self._get_method(method), object_id, request])
         data = response.data

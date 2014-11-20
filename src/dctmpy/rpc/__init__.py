@@ -64,6 +64,7 @@ def register_known_commands(session):
     _register(session, Rpc('SHOW_SESSIONS', as_collection, Collection, False))
     _register(session, Rpc('START_PUSH', as_boolean, TypedObject, False))
     _register(session, Rpc('TIME', as_time, TypedObject, False))
+    _register(session, Rpc('SET_PUSH_OBJECT_STATUS', as_boolean, TypedObject, False))
 
 
 def _register(session, command):
