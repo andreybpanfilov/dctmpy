@@ -4,6 +4,7 @@ import argparse
 import re
 import time
 
+from dctmpy import get_current_time_mills
 from dctmpy.nagios import *
 
 
@@ -27,6 +28,7 @@ from dctmpy.docbrokerclient import DocbrokerClient
 
 
 THRESHOLDS = 'thresholds'
+PERFORMANCE = 'performance'
 NULL_CONTEXT = 'null'
 
 
@@ -39,7 +41,7 @@ class CheckDocbase(Resource):
     def probe(self):
         yield Metric(NULL_CONTEXT, 0, context=NULL_CONTEXT)
         try:
-            self.check_login()
+            self.check_login(self.mode == 'login')
             if not self.session:
                 return
             if self.mode == 'login':
@@ -277,7 +279,7 @@ class CheckDocbase(Resource):
             self.add_result(Critical, message)
             return
         if re.match('agentexec', job['a_special_app']) or (
-                    job['a_last_invocation'] > -1 and not job['a_last_completion']):
+                        job['a_last_invocation'] > -1 and not job['a_last_completion']):
             message = "%s is running for %s" % (
                 (job['object_name']), pretty_interval(now - job['a_last_invocation']))
             self.add_result(Ok, message)
@@ -603,9 +605,12 @@ class CheckDocbase(Resource):
             message = "Unable to open %s: %s" % (url, str(e))
             self.add_result(Critical, message)
 
-    def check_login(self):
+    def check_login(self, yield_metrics=False):
         try:
+            start = get_current_time_mills()
             session = DocbaseClient(host=self.host, port=self.port, docbaseid=self.docbaseid)
+            if yield_metrics:
+                yield Metric('connection_time', get_current_time_mills() - start, "ms", min=0, context=PERFORMANCE)
         except Exception, e:
             message = "Unable to connect to docbase: %s" % str(e)
             self.add_result(Critical, message)
@@ -613,7 +618,10 @@ class CheckDocbase(Resource):
 
         if self.login and self.authentication:
             try:
+                start = get_current_time_mills()
                 session.authenticate(self.login, self.authentication)
+                if yield_metrics:
+                    yield Metric('authentication_time', get_current_time_mills() - start, "ms", min=0, context=PERFORMANCE)
             except Exception, e:
                 message = "Unable to authenticate: %s" % str(e)
                 self.add_result(Critical, message)
@@ -668,8 +676,8 @@ def main():
     argp.add_argument('-i', '--docbaseid', required=False, metavar='docbaseid', type=int, help='docbase identifier')
     argp.add_argument('-l', '--login', metavar='username', help='username')
     argp.add_argument('-a', '--authentication', metavar='password', help='password')
-    #todo add ssl support
-    #argp.add_argument('-s', '--secure', action='store_true', help='use ssl')
+    # todo add ssl support
+    # argp.add_argument('-s', '--secure', action='store_true', help='use ssl')
     argp.add_argument('-t', '--timeout', metavar='timeout', default=60, type=int,
                       help='check timeout, default is 60 seconds')
     argp.add_argument('-m', '--mode', required=True, metavar='mode',
@@ -685,7 +693,7 @@ def main():
     m = re.match('^(dctm(s)?://((.*?)(:(.*))?@)?)?([^/:]+?)(:(\d+))?(/(\d+))?$', args.host)
     if m:
         if m.group(2):
-            #setattr(args, 'secure', m.group(2))
+            # setattr(args, 'secure', m.group(2))
             pass
         if m.group(4):
             setattr(args, 'login', m.group(4))
@@ -715,6 +723,12 @@ def main():
             THRESHOLDS,
             getattr(args, "warning"),
             getattr(args, "critical"),
+            fmt_metric=fmt_metric
+        )
+    )
+    check.add(
+        ScalarContext(
+            PERFORMANCE,
             fmt_metric=fmt_metric
         )
     )

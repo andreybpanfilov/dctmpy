@@ -3,14 +3,18 @@
 import argparse
 import re
 
-from nagiosplugin import Check, Resource, guarded, Result, Metric
+from nagiosplugin import Check, Resource, guarded, Result, Metric, ScalarContext
+
 from nagiosplugin.state import Critical, Ok, Unknown
 
+from dctmpy import get_current_time_mills
 from dctmpy.docbrokerclient import DocbrokerClient
 from dctmpy.nagios import CheckSummary
 
 
 NULL_CONTEXT = 'null'
+PERFORMANCE = 'performance'
+THRESHOLDS = 'thresholds'
 
 
 class CheckDocbroker(Resource):
@@ -20,9 +24,13 @@ class CheckDocbroker(Resource):
 
     def probe(self):
         yield Metric(NULL_CONTEXT, 0, context=NULL_CONTEXT)
+        start = get_current_time_mills()
         docbroker = DocbrokerClient(host=self.host, port=self.port)
+        yield Metric('connection_time', get_current_time_mills() - start, "ms", min=0, context=PERFORMANCE)
         try:
+            start = get_current_time_mills()
             docbasemap = docbroker.get_docbasemap()
+            yield Metric('docbase_map_time', get_current_time_mills() - start, "ms", min=0, context=PERFORMANCE)
 
             if not docbasemap['r_docbase_name']:
                 message = "No registered docbases"
@@ -53,7 +61,9 @@ class CheckDocbroker(Resource):
                     continue
 
                 try:
+                    start = get_current_time_mills()
                     servermap = docbroker.get_servermap(docbase)
+                    yield Metric('server_map_time', get_current_time_mills() - start, "ms", min=0, context=PERFORMANCE)
                     if server not in servermap['r_server_name']:
                         message = "Server %s.%s is not registered on %s:%d" % (docbase, server, self.host, self.port)
                         self.add_result(Critical, message)
@@ -98,6 +108,8 @@ def main():
     argp.add_argument('-n', '--name', metavar='name', default='', help='name of check that appears in output')
     argp.add_argument('-t', '--timeout', metavar='timeout', default=60, type=int,
                       help='check timeout, default is 60 seconds')
+    argp.add_argument('-w', '--warning', metavar='RANGE', help='warning threshold')
+    argp.add_argument('-c', '--critical', metavar='RANGE', help='critical threshold')
     args = argp.parse_args()
 
     if ':' in args.host:
@@ -109,7 +121,24 @@ def main():
     if getattr(args, 'name', None):
         check.name = args.name
     check.add(CheckDocbroker(args, check.results))
+    check.add(
+        ScalarContext(
+            PERFORMANCE,
+            getattr(args, "warning"),
+            getattr(args, "critical"),
+            fmt_metric=fmt_metric
+        )
+    )
     check.main(timeout=args.timeout)
+
+
+def fmt_metric(metric, context):
+    if hasattr(metric, 'message'):
+        return getattr(metric, 'message')
+    return '{name} is {valueunit}'.format(
+        name=metric.name, value=metric.value, uom=metric.uom,
+        valueunit=metric.valueunit, min=metric.min, max=metric.max
+    )
 
 
 if __name__ == '__main__':

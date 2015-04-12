@@ -359,6 +359,10 @@ def chunks(l, n):
         yield l[i:i + n]
 
 
+def get_current_time_mills():
+    return int(round(time.time() * 1000))
+
+
 class ParserException(RuntimeError):
     def __init__(self, *args, **kwargs):
         RuntimeError.__init__(self, *args, **kwargs)
