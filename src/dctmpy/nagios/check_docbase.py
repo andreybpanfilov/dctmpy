@@ -41,7 +41,9 @@ class CheckDocbase(Resource):
     def probe(self):
         yield Metric(NULL_CONTEXT, 0, context=NULL_CONTEXT)
         try:
-            self.check_login(self.mode == 'login')
+            for result in self.check_login(self.mode == 'login'):
+                if result:
+                    yield result
             if not self.session:
                 return
             if self.mode == 'login':
