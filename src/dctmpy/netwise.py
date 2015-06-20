@@ -8,13 +8,13 @@ import ssl
 
 
 class Netwise(object):
-    attributes = ['version', 'release', 'inumber', 'sequence', 'sockopts', 'socket']
+    attributes = ['version', 'release', 'inumber', 'sequence', 'host', 'port', 'secure', 'sslopts', 'socket']
 
     def __init__(self, **kwargs):
         for attribute in Netwise.attributes:
             setattr(self, attribute, kwargs.pop(attribute, None))
-        if self.sockopts is None:
-            self.sockopts = kwargs
+        if self.sslopts is None:
+            self.sslopts = kwargs
         if self.sequence is None:
             self.sequence = 0
         self.socket = None
@@ -27,18 +27,25 @@ class Netwise(object):
     def _socket(self):
         if not self._connected():
             try:
-                host = self.sockopts.get('host', None)
-                port = self.sockopts.get('port', None)
-                secure = self.sockopts.get('secure', False)
-                if not host or not (port > -1):
+                if not self.host or not (self.port > -1):
                     raise RuntimeError("Invalid host or port")
                 self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if secure:
-                    self.socket = ssl.wrap_socket(self.socket)
-                self.socket.connect((host, port))
-            except:
-                self.socket = None
-                raise
+                if self.secure:
+                    self.socket = ssl.wrap_socket(self.socket, **dict(self.sslopts))
+                self.socket.connect((self.host, self.port))
+            except Exception, e:
+                if self.secure:
+                    try:
+                        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        self.socket.connect((self.host, self.port - 1))
+                        self.port -= 1
+                        self.secure = False
+                    except:
+                        self.socket = None
+                        raise e
+                else:
+                    self.socket = None
+                    raise
         return self.socket
 
     def disconnect(self):
@@ -59,5 +66,3 @@ class Netwise(object):
             'release': self.release,
             'inumber': self.inumber,
         }))
-
-

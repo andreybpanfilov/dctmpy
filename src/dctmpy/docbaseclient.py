@@ -70,7 +70,7 @@ class DocbaseClient(Netwise):
                                     NULL_ID,
                                 ],
                                 immediate=True,
-        ).receive()
+                                ).receive()
 
         reason = response.next()
         m = re.search('Wrong docbase id: \(-1\) expecting: \((\d+)\)', reason)
@@ -79,7 +79,7 @@ class DocbaseClient(Netwise):
         self.disconnect()
 
     def _set_locale(self, charset=CHARSETS[DEFAULT_CHARSET]):
-        if not charset in CHARSETS_REVERSE:
+        if charset not in CHARSETS_REVERSE:
             raise RuntimeError("Unknown charset id %s" % charset)
         try:
             self.set_locale(charset)
@@ -102,7 +102,7 @@ class DocbaseClient(Netwise):
                                  self.session,
                              ],
                              immediate=True,
-                ).receive()
+                             ).receive()
             super(DocbaseClient, self).disconnect()
         finally:
             self.session = None
@@ -122,7 +122,7 @@ class DocbaseClient(Netwise):
                                     NULL_ID,
                                 ],
                                 immediate=True,
-        ).receive()
+                                ).receive()
 
         reason = response.next()
         server_version = response.next()
@@ -404,7 +404,6 @@ class DocbaseClient(Netwise):
             raise RuntimeError("Unknown method: %s" % name)
         return self.entrypoints[name]
 
-
     def _add_entry_point(self, name):
         func = pep_name(name)
         if getattr(DocbaseClient, func, None):
@@ -448,4 +447,3 @@ class Response(object):
     def __init__(self, **kwargs):
         for attribute in Response.attributes:
             setattr(self, attribute, kwargs.pop(attribute, None))
-

@@ -1,5 +1,11 @@
 from nagiosplugin import Summary, Ok, Unknown, Warn, Critical, Metric
 
+CIPHERS = "ALL:aNULL:!eNULL"
+
+THRESHOLDS = 'thresholds'
+TIME_THRESHOLDS = 'time_thresholds'
+NULL_CONTEXT = 'null'
+
 JOB_ATTRIBUTES = ['object_name', 'is_inactive', 'a_last_invocation',
                   'a_last_completion', 'a_last_return_code', 'a_current_status',
                   'a_status', 'a_special_app', 'run_mode', 'run_interval',
@@ -61,9 +67,9 @@ def is_empty(value):
 
 def pretty_interval(delta):
     if delta >= 0:
-        secs = (delta) % 60
-        mins = (int((delta) / 60)) % 60
-        hours = (int((delta) / 3600))
+        secs = delta % 60
+        mins = (int(delta / 60)) % 60
+        hours = (int(delta / 3600))
         if hours < 24:
             return "%02d:%02d:%02d" % (hours, mins, secs)
         else:
@@ -74,15 +80,15 @@ def pretty_interval(delta):
 
 
 def get_failed_tasks(session, offset=None):
-    query = "SELECT que.task_name, que.name" \
-            " FROM dmi_queue_item que, dmi_workitem wi, dmi_package pkg" \
-            " WHERE que.event = 'dm_changedactivityinstancestate'" \
-            " AND que.item_id LIKE '4a%%'" \
-            " AND que.message LIKE 'Activity instance, %%, of workflow, %%, failed.'" \
-            " AND que.item_id = wi.r_object_id" \
-            " AND wi.r_workflow_id = pkg.r_workflow_id" \
-            " AND wi.r_act_seqno = pkg.r_act_seqno" \
-            " AND que.delete_flag = 0"
+    query = "SELECT que.task_name, que.name " \
+            "FROM dmi_queue_item que, dmi_workitem wi, dmi_package pkg " \
+            "WHERE que.event = 'dm_changedactivityinstancestate' " \
+            "AND que.item_id LIKE '4a%%' " \
+            "AND que.message LIKE 'Activity instance, %%, of workflow, %%, failed.' " \
+            "AND que.item_id = wi.r_object_id " \
+            "AND wi.r_workflow_id = pkg.r_workflow_id " \
+            "AND wi.r_act_seqno = pkg.r_act_seqno " \
+            "AND que.delete_flag = 0"
     if offset >= 0:
         query += " que.date_sent > date(now) - %d " % offset
     return read_query(session, query)
@@ -139,22 +145,22 @@ def read_query(session, query, cnt=0):
 
 
 def get_indexes(session):
-    query = "select index_name, a.object_name " \
-            "from dm_fulltext_index i, dm_ftindex_agent_config a " \
-            "where i.index_name=a.index_name " \
-            "and a.force_inactive = false"
+    query = "SELECT index_name, a.object_name " \
+            "FROM dm_fulltext_index i, dm_ftindex_agent_config a " \
+            "WHERE i.index_name=a.index_name " \
+            "AND a.force_inactive = FALSE"
     return read_query(session, query)
 
 
 def get_xplore_configs(session):
-    query = "SELECT ft_engine_id as r_object_id FROM dm_fulltext_index WHERE install_loc='dsearch'"
+    query = "SELECT ft_engine_id AS r_object_id FROM dm_fulltext_index WHERE install_loc='dsearch'"
     return read_query(session, query)
 
 
 def get_acs_configs(session):
     serverconfig = session.serverconfig
-    query = "SELECT r_object_id FROM dm_acs_config" \
-            " WHERE svr_config_id='%s'" % serverconfig['r_object_id']
+    query = "SELECT r_object_id FROM dm_acs_config " \
+            "WHERE svr_config_id='%s'" % serverconfig['r_object_id']
     return read_query(session, query)
 
 
@@ -171,7 +177,9 @@ class CheckSummary(Summary):
     def fmt(self, results):
         message = ""
         for state in [Ok, Unknown, Warn, Critical]:
-            hint = ", ".join(str(x) for x in results if x.state == state and not is_empty(str(x)))
+            hint = ", ".join(str(x) for x in results if
+                             x.state == state and not is_empty(str(x)) and (
+                                 not x.metric or x.metric.context != TIME_THRESHOLDS))
             message = ", ".join(x for x in [hint, message] if not (is_empty(x)))
         return message
 

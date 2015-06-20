@@ -338,9 +338,9 @@ def add_type_to_cache(typeObj):
 
 def int_to_pseudo_base64(value):
     result = ""
-    while value >= 64:
-        result += ENCODE.get(value % 64)
-        value = (value - (value % 64)) / 64
+    while value >= 0x40:
+        result += ENCODE.get(value & 0x3f)
+        value >>= 6
     result += ENCODE[value]
     return result
 
@@ -350,7 +350,7 @@ def pseudo_base64_to_int(value):
     for c in list(value)[::-1]:
         if c not in DECODE:
             return None
-        result = (result * 64 + DECODE[c])
+        result = ((result << 6) + DECODE[c])
     return result
 
 
@@ -491,7 +491,6 @@ class TypeInfo(object):
         self.pending = self.super
         self.attrs = []
         self.positions = {}
-
 
     def append(self, attrInfo):
         self.attrs.append(attrInfo)

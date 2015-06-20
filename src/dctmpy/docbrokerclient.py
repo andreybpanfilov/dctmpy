@@ -32,7 +32,7 @@ class DocbrokerClient(Netwise):
     def get_servermap(self, docbase):
         servermap = DocbaseMap(
             buffer=self._request_object(DocbrokerClient._servermap_request(version, handle, docbase)))
-        if not 'r_host_name' in servermap:
+        if 'r_host_name' not in servermap:
             raise RuntimeError("No servers for docbase %s on %s" % (docbase, parse_address(servermap['i_host_addr'])))
         return servermap
 
@@ -40,6 +40,7 @@ class DocbrokerClient(Netwise):
         try:
             result = self.request(Request, type=1, data=[data], immediate=True).receive().next()
         finally:
+            # Docbroker forcibly disconnects client after RPC
             self.disconnect()
         return result
 
@@ -62,5 +63,3 @@ class DocbrokerClient(Netwise):
         obj.add(AttrValue(name="DBR_REQUEST_HANDLE", type=STRING, values=[handle]))
         obj.add(AttrValue(name="DBR_SOFTWARE_VERSION", type=STRING, values=[version]))
         return obj
-
-

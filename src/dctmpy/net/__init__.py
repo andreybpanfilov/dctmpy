@@ -23,10 +23,10 @@ def _serialize_integer(value):
     if value is None:
         raise RuntimeError("Undefined integer value")
     result = bytearray()
-    while value > 127 or value < -128:
-        result.append(value & 0x000000ff)
+    while value >= 0x80 or value < -0x80:
+        result.append(value & 0xff)
         value >>= 8
-    result.append(value & 0xFF)
+    result.append(value & 0xff)
     result.append(len(result))
     result.append(INTEGER_START)
     result.reverse()
@@ -36,8 +36,8 @@ def _serialize_integer(value):
 def serialize_integer(value):
     if value is None:
         raise RuntimeError("Undefined integer value")
-    if -65535 <= value < 65536:
-        if not value in INTEGERS:
+    if -0xffff <= value <= 0xffff:
+        if value not in INTEGERS:
             INTEGERS[value] = _serialize_integer(value)
         return INTEGERS[value]
     return _serialize_integer(value)
@@ -47,8 +47,8 @@ def _serialize_length(value):
     if value is None:
         raise RuntimeError("Undefined integer value")
     result = bytearray()
-    while value > 127:
-        result.append(value & 0x000000ff)
+    while value >= 0x80:
+        result.append(value & 0xff)
         value >>= 8
     result.append(value)
     if len(result) > 1:
@@ -60,8 +60,8 @@ def _serialize_length(value):
 def serialize_length(value):
     if value is None:
         raise RuntimeError("Undefined integer value")
-    if value < 65536:
-        if not value in LENGTHS:
+    if value <= 0xffff:
+        if value not in LENGTHS:
             LENGTHS[value] = _serialize_length(value)
         return LENGTHS[value]
     return _serialize_length(value)
@@ -91,7 +91,7 @@ def serialize_integer_array(intarray):
     result = bytearray(4)
     for i in intarray:
         result.extend(serialize_integer(i))
-    result[3] = (len(result) - 4) & 0x000000ff
+    result[3] = (len(result) - 4) & 0xff
     result[2] = (len(result) - 4) >> 8
     result[1] = LONG_LENGTH_START
     result[0] = INT_ARRAY_START
@@ -146,9 +146,9 @@ def read_integer(data, offset=0):
 def read_length(data, offset=0):
     value = data[offset]
     offset += 1
-    if value <= 127:
+    if value < 0x80:
         return value, offset
-    length = value & 0x7F
+    length = value & 0x7f
     value = data[offset]
     if length > 1:
         value = value << 8 | data[1 + offset]
@@ -201,5 +201,3 @@ def read_string(data, offset=0):
 
 def read_binary(data, offset=0):
     return read_array(data, offset, False)
-
-

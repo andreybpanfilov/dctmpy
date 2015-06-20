@@ -340,7 +340,7 @@ class TypedObject(object):
     def dump(self):
         primary = ""
         extended = ""
-        fmt = "\n %-16s %10s: %s"
+        fmt = "\n %-30s %8s: %s"
         for attr in self.attrs:
             value = self.attrs[attr]
             data = ""
