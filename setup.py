@@ -2,15 +2,16 @@ import sys
 
 from setuptools import setup
 
-
 if sys.version_info < (2, 7):
     extras_require = {'nagios': ['argparse', 'nagiosplugin>=1.2.2']}
+    install_requires = ["pyOpenSSL"]
 else:
     extras_require = {'nagios': ['nagiosplugin>=1.2.2']}
+    install_requires = []
 
 setup(
     name='dctmpy',
-    version='0.2.3',
+    version='0.2.4',
     packages=['dctmpy', 'dctmpy.net', 'dctmpy.obj', 'dctmpy.rpc', 'dctmpy.nagios'],
     package_dir={'': 'src'},
     license='ZPL-2.1',
@@ -37,5 +38,6 @@ setup(
         'console_scripts':
             ['nagios_check_docbase = dctmpy.nagios.check_docbase:main [nagios]',
              'nagios_check_docbroker = dctmpy.nagios.check_docbroker:main [nagios]']
-    }
+    },
+    install_requires=install_requires
 )

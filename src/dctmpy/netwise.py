@@ -2,7 +2,10 @@
 #
 # See main module for license.
 #
-
+try:
+    from OpenSSL import SSL, crypto
+except:
+    pass
 import socket
 import ssl
 
@@ -31,7 +34,13 @@ class Netwise(object):
                     raise RuntimeError("Invalid host or port")
                 self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 if self.secure:
-                    self.socket = ssl.wrap_socket(self.socket, **dict(self.sslopts))
+                    if SSL:
+                        ctx = SSL.Context(SSL.SSLv23_METHOD)
+                        if self.sslopts and self.sslopts.get("ciphers", None):
+                            ctx.set_cipher_list(self.sslopts.get("ciphers"))
+                        self.socket = SSL.Connection(ctx, socket.socket(socket.AF_INET, socket.SOCK_STREAM))
+                    else:
+                        self.socket = ssl.wrap_socket(self.socket, **dict(self.sslopts))
                 self.socket.connect((self.host, self.port))
             except Exception, e:
                 if self.secure:
