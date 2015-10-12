@@ -35,7 +35,7 @@ class Request(object):
 
     def send(self):
         self.socket.sendall(
-            self._build_request()
+            str(self._build_request())
         )
 
     def receive(self):
