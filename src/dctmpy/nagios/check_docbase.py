@@ -65,6 +65,16 @@ class CheckDocbase(Resource):
                      max=int(count['concurrent_sessions']),
                      context=THRESHOLDS)
 
+    def check_uptime(self):
+        try:
+            start = self.session.list_sessions()['root_start']
+            uptime = self.session.time() - start
+        except Exception, e:
+            self.add_result(Critical, "Unable to retrieve session list: " + str(e))
+            return
+        yield CustomMetric('uptime', int(uptime), "s", min=0, context=THRESHOLDS).add_message(
+            "CS uptime is %s" % pretty_interval(uptime))
+
     def check_targets(self):
         targets = []
         server_name = self.session.serverconfig['object_name']
@@ -717,6 +727,7 @@ class CheckDocbase(Resource):
 
 modes = {
     'sessioncount': [CheckDocbase.check_sessions, True, False, "check active session count"],
+    'uptime': [CheckDocbase.check_uptime, True, False, "check content server uptime"],
     'targets': [CheckDocbase.check_targets, False, False, "check whether server is registered on projection targets"],
     'indexagents': [CheckDocbase.check_index_agents, False, False, "check index agent status"],
     'jobs': [CheckDocbase.check_jobs, False, False, "check job scheduling"],
