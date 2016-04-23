@@ -38,7 +38,7 @@ class DocbrokerClient(Netwise):
 
     def _request_object(self, data):
         try:
-            result = self.request(Request, type=1, data=[data], immediate=True).receive().next()
+            result = self.request(Request, type=1, data=[data]).next()
         finally:
             # Docbroker forcibly disconnects client after RPC
             self.disconnect()

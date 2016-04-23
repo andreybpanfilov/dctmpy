@@ -68,10 +68,13 @@ class Netwise(object):
         self.disconnect()
 
     def request(self, cls, **kwargs):
+        sequence = kwargs.get('sequence', None)
+        if sequence is None:
+            sequence = self.sequence = self.sequence + 1
         return cls(**dict(kwargs, **{
             'socket': self._socket(),
-            'sequence': ++self.sequence,
+            'sequence': sequence,
             'version': self.version,
             'release': self.release,
             'inumber': self.inumber,
-        }))
+        })).receive()

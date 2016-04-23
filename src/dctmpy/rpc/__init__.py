@@ -65,6 +65,11 @@ def register_known_commands(session):
     _register(session, Rpc('START_PUSH', as_boolean, TypedObject, False))
     _register(session, Rpc('TIME', as_time, TypedObject, False))
     _register(session, Rpc('SET_PUSH_OBJECT_STATUS', as_boolean, TypedObject, False))
+    _register(session, Rpc('PUT_FILE', as_object, TypedObject, False))
+    _register(session, Rpc('GET_TEMP_FILE', as_object, TypedObject, False))
+    _register(session, Rpc('GET_FILE', as_object, TypedObject, False))
+    _register(session, Rpc('NEXT_ID_LIST', as_object, TypedObject, False))
+    _register(session, Rpc('CHECKOUT_LICENSE', as_object, TypedObject, False))
 
 
 def _register(session, command):

@@ -5,7 +5,7 @@
 import logging
 
 from dctmpy import *
-from dctmpy.net.request import Request, DownloadRequest
+from dctmpy.net.request import Request, DownloadRequest, UploadRequest
 from dctmpy.netwise import Netwise
 from dctmpy.obj.collection import Collection, PersistentCollection
 from dctmpy.obj.persistent import PersistentProxy
@@ -36,20 +36,19 @@ class DocbaseClient(Netwise):
             'inumber': NETWISE_INUMBER,
         }))
 
+        self.__collections = dict()
+        self.__readingmessages = False
+
         if self.serversion is None:
             self.serversion = 0
         if self.iso8601time is None:
             self.iso8601time = False
-        if not self.session:
-            self.session = NULL_ID
         if not self.docbaseid >= 0:
             self._resolve_docbase_id()
         if self.messages is None:
             self.messages = []
         if self.serversionhint is None:
             self.serversionhint = CLIENT_VERSION_ARRAY[3]
-
-        self.readingmessages = False
 
         self._connect()
         self._fetch_entry_points()
@@ -68,9 +67,7 @@ class DocbaseClient(Netwise):
                                     EMPTY_STRING,
                                     CLIENT_VERSION_ARRAY,
                                     NULL_ID,
-                                ],
-                                immediate=True,
-                                ).receive()
+                                ])
 
         reason = response.next()
         m = re.search('Wrong docbase id: \(-1\) expecting: \((\d+)\)', reason)
@@ -94,21 +91,24 @@ class DocbaseClient(Netwise):
                 raise e
 
     def disconnect(self):
-        try:
-            if self.session and self.session != NULL_ID:
-                self.request(Request,
-                             type=RPC_CLOSE_SESSION,
-                             data=[
-                                 self.session,
-                             ],
-                             immediate=True,
-                             ).receive()
-            super(DocbaseClient, self).disconnect()
-        finally:
-            self.session = None
+        for collection in self.__collections.values():
+            collection.close()
+        self._disconnect()
 
     def _reconnect(self):
         ''
+
+    def _disconnect(self):
+        if not self.session:
+            return
+        if self.session == NULL_ID:
+            return
+        try:
+            if self.session and self.session != NULL_ID:
+                self.request(Request, type=RPC_CLOSE_SESSION)
+            super(DocbaseClient, self).disconnect()
+        finally:
+            self.session = None
 
     def _connect(self):
         response = self.request(Request,
@@ -120,9 +120,7 @@ class DocbaseClient(Netwise):
                                     EMPTY_STRING,
                                     CLIENT_VERSION_ARRAY,
                                     NULL_ID,
-                                ],
-                                immediate=True,
-                                ).receive()
+                                ])
 
         reason = response.next()
         server_version = response.next()
@@ -149,7 +147,7 @@ class DocbaseClient(Netwise):
     def download(self, handle, rpc=RPC_GET_BLOCK5):
         i = 0
         while True:
-            response = self.request(DownloadRequest, type=rpc, data=[handle, i], immediate=True).receive()
+            response = self.request(DownloadRequest, type=rpc, data=[handle, i])
             length = response.next()
             last = response.next() == 1
             data = response.next()
@@ -171,16 +169,26 @@ class DocbaseClient(Netwise):
                 break
             i += 1
 
+    def upload(self, handle, data):
+        offset = 0
+        response = self.request(UploadRequest, type=RPC_DO_PUSH, data=[handle])
+        while True:
+            stop = response.rpc == 17023
+            (chunk, offset, last) = create_chunk(data, offset, response.rpc)
+            cls = [UploadRequest, Request][stop]
+            sequence = [response.sequence, self.sequence][stop]
+            send = [[len(chunk), [0, 1][last], chunk], []][stop]
+            response = self.request(cls, type=0, data=send, sequence=sequence)
+            if stop:
+                break
+
     def rpc(self, rpc_id, data=None):
         if not data:
             data = []
-        if self.session:
-            if len(data) == 0 or data[0] != self.session:
-                data.insert(0, self.session)
 
         (valid, o_data, collection, persistent, maybemore, records) = (None, None, None, None, None, None)
 
-        response = self.request(Request, type=rpc_id, data=data, immediate=True).receive()
+        response = self.request(Request, type=rpc_id, data=data)
         message = response.next()
         if rpc_id == RPC_APPLY_FOR_OBJECT:
             valid = int(response.next()) > 0
@@ -191,7 +199,7 @@ class DocbaseClient(Netwise):
             maybemore = int(response.next()) > 0
             valid = collection >= 0
         elif rpc_id == RPC_CLOSE_COLLECTION:
-            pass
+            self.__collections.pop(data[1], None)
         elif rpc_id == RPC_GET_NEXT_PIECE:
             pass
         elif rpc_id == RPC_MULTI_NEXT:
@@ -202,12 +210,12 @@ class DocbaseClient(Netwise):
             valid = int(response.next()) > 0
         o_data = response.next()
 
-        if (o_data & 0x02 != 0) and not self.readingmessages:
+        if (o_data & 0x02 != 0) and not self.__readingmessages:
             try:
-                self.readingmessages = True
+                self.__readingmessages = True
                 self._get_messages()
             finally:
-                self.readingmessages = False
+                self.__readingmessages = False
 
         # TODO in some cases (e.g. AUTHENTICATE_USER) CS returns both OBDATA and RESULT
         if o_data & 0x02 != 0 and len(self.messages) > 0:
@@ -288,6 +296,9 @@ class DocbaseClient(Netwise):
             else:
                 result.batchsize = DEFAULT_BATCH_SIZE
 
+        if isinstance(result, Collection):
+            self.__collections[result.collection] = result
+
         return result
 
     def _get_messages(self):
@@ -355,10 +366,14 @@ class DocbaseClient(Netwise):
 
     def get_by_qualification(self, qualification):
         collection = self.query("select r_object_id from %s" % qualification)
-        record = collection.next_record()
-        if record:
-            return self.get_object(record['r_object_id'])
-        return None
+        try:
+            record = collection.next_record()
+            if record:
+                return self.get_object(record['r_object_id'])
+            return None
+        finally:
+            if collection:
+                collection.close()
 
     def get_object(self, objectid):
         obj = self.fetch(objectid)
@@ -388,7 +403,7 @@ class DocbaseClient(Netwise):
         if self._isobfuscated(password):
             return password
         return "".join(
-            "%02x" % [x ^ 0xB6, 0xB6][x == 0xB6] for x in (ord(x) for x in password[::-1])
+                "%02x" % [x ^ 0xB6, 0xB6][x == 0xB6] for x in (ord(x) for x in password[::-1])
         )
 
     def _isobfuscated(self, password):
@@ -439,6 +454,14 @@ class DocbaseClient(Netwise):
 
         inner.__name__ = func
         setattr(self.__class__, inner.__name__, inner)
+
+    def request(self, cls, **kwargs):
+        data = kwargs.pop("data", [])
+        if self.session:
+            if len(data) == 0 or data[0] != self.session:
+                data.insert(0, self.session)
+        kwargs["data"] = data
+        return super(DocbaseClient, self).request(cls, **kwargs)
 
 
 class Response(object):

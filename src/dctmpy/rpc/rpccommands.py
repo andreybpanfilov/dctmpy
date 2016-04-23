@@ -90,7 +90,7 @@ class Rpc(object):
         return obj
 
     @staticmethod
-    def exec_select_sql(session, query, batch_hint):
+    def exec_select_sql(session, query, batch_hint=50):
         obj = TypedObject(session=session)
         obj.add(AttrValue(name="QUERY", type=STRING, values=[query]))
         obj.add(AttrValue(name="BATCH_HINT", type=INT, values=[batch_hint]))
@@ -186,16 +186,16 @@ class Rpc(object):
         return obj
 
     @staticmethod
-    def start_push(session, handle, content_id, fmt, size, size_low, size_high=0, d_ticket=0, is_other=False,
+    def start_push(session, handle, content_id, fmt, size, d_ticket=0, is_other=False,
                    compression=False, can_use_new_callbacks=True, encoded_content_attrs='', i_partition=0):
         obj = TypedObject(session=session)
         obj.add(AttrValue(name="HANDLE", type=INT, values=[handle]))
         obj.add(AttrValue(name="CONTENT_ID", type=ID, values=[content_id]))
         obj.add(AttrValue(name="FORMAT", type=ID, values=[fmt]))
         obj.add(AttrValue(name="D_TICKET", type=INT, values=[d_ticket]))
-        obj.add(AttrValue(name="SIZE", type=INT, values=[size]))
-        obj.add(AttrValue(name="SIZE_LOW", type=INT, values=[size_low]))
-        obj.add(AttrValue(name="SIZE_HIGH", type=INT, values=[size_high]))
+        obj.add(AttrValue(name="SIZE", type=INT, values=[size << 32]))
+        obj.add(AttrValue(name="SIZE_LOW", type=INT, values=[size << 32]))
+        obj.add(AttrValue(name="SIZE_HIGH", type=INT, values=[size >> 32]))
         obj.add(AttrValue(name="IS_OTHER", type=BOOL, values=[is_other]))
         obj.add(AttrValue(name="COMPRESSION", type=BOOL, values=[compression]))
         obj.add(AttrValue(name="CAN_USE_NEW_CALLBACKS", type=BOOL, values=[can_use_new_callbacks]))
@@ -301,4 +301,48 @@ class Rpc(object):
         obj = TypedObject(session=session)
         obj.add(AttrValue(name="_PUSHED_ID_", type=ID, values=[objectId]))
         obj.add(AttrValue(name="_PUSH_STATUS_", type=BOOL, values=[value]))
+        return obj
+
+    @staticmethod
+    def get_temp_file(session):
+        obj = TypedObject(session=session)
+        return obj
+
+    @staticmethod
+    def put_file(session, storageId, file, formatId):
+        obj = TypedObject(session=session)
+        obj.add(AttrValue(name="STORAGE", type=ID, values=[storageId]))
+        obj.add(AttrValue(name="FILE", type=STRING, values=[file]))
+        obj.add(AttrValue(name="FORMAT", type=ID, values=[format]))
+        obj.add(AttrValue(name="MAC_CLIENT", type=BOOL, values=[False]))
+        return obj
+
+    @staticmethod
+    def get_file(session, contentId, fileName=None):
+        content = session.get_object(contentId)
+        obj = TypedObject(session=session)
+        obj.add(AttrValue(name="STORAGE", type=ID, values=[content['storage_id']]))
+        obj.add(AttrValue(name="FORMAT", type=ID, values=[content['format']]))
+        obj.add(AttrValue(name="CONTENT", type=ID, values=[content['r_object_id']]))
+        obj.add(AttrValue(name="D_TICKET", type=INT, values=[content['data_ticket']]))
+        obj.add(AttrValue(name="MAC_CLIENT", type=BOOL, values=[False]))
+        if fileName:
+            obj.add(AttrValue(name="OBJNAME", type=STRING, values=[fileName]))
+        return obj
+
+    @staticmethod
+    def next_id_list(session, tag, how_many=10):
+        obj = TypedObject(session=session)
+        obj.add(AttrValue(name="TAG", type=INT, values=[tag]))
+        obj.add(AttrValue(name="HOW_MANY", type=INT, values=[how_many]))
+        return obj
+
+    @staticmethod
+    def checkout_license(session, feature_name, feature_version, user=None):
+        obj = TypedObject(session=session)
+        if not user:
+            user = session.username
+        obj.add(AttrValue(name="FEATURE_NAME", type=STRING, values=[feature_name]))
+        obj.add(AttrValue(name="FEATURE_VERSION", type=STRING, values=[feature_version]))
+        obj.add(AttrValue(name="USER_LOGIN_NAME", type=STRING, values=[user]))
         return obj

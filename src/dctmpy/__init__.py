@@ -23,11 +23,11 @@
 #
 
 
+import calendar
 import locale
 import platform
 import re
 import time
-import calendar
 
 LONG_LOCALES = {
     'Unknown': 0, 'German': 1, 'English_US': 2, 'English_UK': 3, 'Spanish_Modern': 4, 'Spanish_Castilian': 5,
@@ -316,7 +316,7 @@ def parse_time(value):
         if len(chunks) != 7:
             raise ParserException("Invalid date: %s" % value)
         return calendar.timegm(
-            [int(chunks[0]), int(chunks[1]), int(chunks[2]), int(chunks[3]), int(chunks[4]), int(chunks[5])])
+                [int(chunks[0]), int(chunks[1]), int(chunks[2]), int(chunks[3]), int(chunks[4]), int(chunks[5])])
     else:
         chunks = re.split("[: ]", value)
         if len(chunks) != 6:
@@ -324,8 +324,9 @@ def parse_time(value):
         if not chunks[0] in MONTHS:
             raise ParserException("Invalid month: %s" % chunks[0])
         return time.mktime(
-            [int(chunks[5]), MONTHS[chunks[0]], int(chunks[1]), int(chunks[2]), int(chunks[3]), int(chunks[4]), 0, 0,
-             -1])
+                [int(chunks[5]), MONTHS[chunks[0]], int(chunks[1]), int(chunks[2]), int(chunks[3]), int(chunks[4]), 0,
+                 0,
+                 -1])
 
 
 def get_type_from_cache(attrName):
@@ -361,6 +362,28 @@ def chunks(l, n):
 
 def get_current_time_mills():
     return int(round(time.time() * 1000))
+
+
+def create_chunk(data, offset, rpc):
+    length = len(data) - offset
+    if rpc == RPC_GET_BLOCK1:
+        length = 256
+    elif rpc == RPC_GET_BLOCK2:
+        length = 1024
+    elif rpc == RPC_GET_BLOCK3:
+        length = 4096
+    elif rpc == RPC_GET_BLOCK4 or rpc == RPC_GET_BLOCK:
+        length = 16384
+    elif rpc == RPC_GET_BLOCK5:
+        length = 63000
+    elif rpc == 17023:
+        length = 0
+
+    if length == 0:
+        return bytearray(), len(data), True
+
+    length = min(length, len(data) - offset)
+    return data[offset:offset + length], offset + length, offset + length == len(data)
 
 
 class ParserException(RuntimeError):

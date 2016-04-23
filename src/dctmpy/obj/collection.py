@@ -60,6 +60,7 @@ class Collection(TypedObject):
             def next(self):
                 r = self.obj.next_record()
                 if r is None:
+                    self.obj.close()
                     raise StopIteration
                 else:
                     return r
@@ -70,6 +71,8 @@ class Collection(TypedObject):
         if self.collection >= 0:
             try:
                 self.session.close_collection(self.collection)
+            except:
+                pass
             finally:
                 self.collection = None
 

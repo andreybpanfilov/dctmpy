@@ -67,18 +67,23 @@ def serialize_length(value):
     return _serialize_length(value)
 
 
-def serialize_string(value):
+def serialize_array(value, asstring=False):
     result = bytearray()
     if not value:
         result.append(EMPTY_STRING_START)
         result.append(NULL_BYTE)
         return result
     result.extend(value)
-    result.append(NULL_BYTE)
+    if asstring:
+        result.append(NULL_BYTE)
     for b in reversed(serialize_length(len(result))):
         result.insert(0, b)
     result.insert(0, STRING_START)
     return result
+
+
+def serialize_string(value):
+    return serialize_array(value, True)
 
 
 def serialize_id(value):
@@ -104,7 +109,7 @@ def serialize_value(value):
     elif isinstance(value, str):
         return serialize_string(value)
     elif isinstance(value, bytearray):
-        return serialize_string(value)
+        return serialize_array(value)
     elif isinstance(value, int):
         return serialize_integer(value)
     elif isinstance(value, list):

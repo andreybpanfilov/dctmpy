@@ -53,3 +53,12 @@ class DownloadResponse(Response):
     def _read_string(self):
         (result, self.offset) = read_binary(self.message, self.offset)
         return result
+
+
+class UploadResponse(Response):
+    attributes = ['rpc', 'sequence']
+
+    def __init__(self, **kwargs):
+        for attribute in UploadResponse.attributes:
+            setattr(self, attribute, kwargs.pop(attribute, None))
+        super(UploadResponse, self).__init__(**kwargs)
