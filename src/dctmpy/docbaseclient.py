@@ -147,7 +147,7 @@ class DocbaseClient(Netwise):
     def download(self, handle, rpc=RPC_GET_BLOCK5):
         i = 0
         while True:
-            response = self.request(DownloadRequest, type=rpc, data=[handle, i])
+            response = self.request(DownloadRequest, False, type=rpc, data=[handle, i])
             length = response.next()
             last = response.next() == 1
             data = response.next()
@@ -455,9 +455,9 @@ class DocbaseClient(Netwise):
         inner.__name__ = func
         setattr(self.__class__, inner.__name__, inner)
 
-    def request(self, cls, **kwargs):
+    def request(self, cls, add_session=True, **kwargs):
         data = kwargs.pop("data", [])
-        if self.session:
+        if add_session and self.session:
             if len(data) == 0 or data[0] != self.session:
                 data.insert(0, self.session)
         kwargs["data"] = data

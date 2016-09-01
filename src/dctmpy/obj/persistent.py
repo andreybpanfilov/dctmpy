@@ -155,7 +155,10 @@ class DmrContent(Persistent):
                 yield chunk
         finally:
             if handle > 0:
-                self.session.kill_puller(handle)
+                try:
+                    self.session.kill_puller(handle)
+                except:
+                    pass
 
 
 TAG_CLASS_MAPPING = {
