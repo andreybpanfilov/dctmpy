@@ -151,7 +151,7 @@ class DocbaseClient(Netwise):
             length = response.next()
             last = response.next() == 1
             data = response.next()
-            if length == 0:
+            if length == 0 and not last:
                 raise RuntimeError("Puller is closed")
             if isinstance(data, list):
                 l = 0
@@ -178,7 +178,7 @@ class DocbaseClient(Netwise):
             cls = [UploadRequest, Request][stop]
             sequence = [response.sequence, self.sequence][stop]
             send = [[len(chunk), [0, 1][last], chunk], []][stop]
-            response = self.request(cls, type=0, data=send, sequence=sequence)
+            response = self.request(cls, False, type=0, data=send, sequence=sequence)
             if stop:
                 break
 

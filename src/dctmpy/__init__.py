@@ -274,6 +274,15 @@ def get_offset_in_seconds():
     return int(time.mktime(time.gmtime(t)) - time.mktime(time.localtime(t)))
 
 
+def as_list(value):
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [] + value
+    else:
+        return [value]
+
+
 def is_empty(value):
     if value is None:
         return True
@@ -316,7 +325,8 @@ def parse_time(value):
         if len(chunks) != 7:
             raise ParserException("Invalid date: %s" % value)
         return calendar.timegm(
-                [int(chunks[0]), int(chunks[1]), int(chunks[2]), int(chunks[3]), int(chunks[4]), int(chunks[5])])
+            [int(chunks[0]), int(chunks[1]), int(chunks[2]),
+             int(chunks[3]), int(chunks[4]), int(chunks[5])])
     else:
         chunks = re.split("[: ]", value)
         if len(chunks) != 6:
@@ -324,9 +334,9 @@ def parse_time(value):
         if not chunks[0] in MONTHS:
             raise ParserException("Invalid month: %s" % chunks[0])
         return time.mktime(
-                [int(chunks[5]), MONTHS[chunks[0]], int(chunks[1]), int(chunks[2]), int(chunks[3]), int(chunks[4]), 0,
-                 0,
-                 -1])
+            [int(chunks[5]), MONTHS[chunks[0]], int(chunks[1]),
+             int(chunks[2]), int(chunks[3]), int(chunks[4]),
+             0, 0, -1])
 
 
 def get_type_from_cache(attrName):
@@ -383,7 +393,7 @@ def create_chunk(data, offset, rpc):
         return bytearray(), len(data), True
 
     length = min(length, len(data) - offset)
-    return data[offset:offset + length], offset + length, offset + length == len(data)
+    return data[offset:offset + length], offset + length, (offset + length) == len(data)
 
 
 class ParserException(RuntimeError):
@@ -444,10 +454,7 @@ class AttrValue(object):
     def __init__(self, **kwargs):
         for attribute in AttrValue.attributes:
             setattr(self, attribute, kwargs.pop(attribute, None))
-        if self.values is None:
-            self.values = []
-        if not isinstance(self.values, list):
-            self.values = [self.values]
+        self.values = as_list(self.values)
         if self.repeating is None:
             self.repeating = False
         if self.length is None:
@@ -499,7 +506,8 @@ class AttrValue(object):
 
 
 class TypeInfo(object):
-    attributes = ['name', 'id', 'vstamp', 'version', 'cache', 'super', 'sharedparent', 'aspectname', 'aspectshareflag',
+    attributes = ['name', 'id', 'vstamp', 'version', 'cache', 'super',
+                  'sharedparent', 'aspectname', 'aspectshareflag',
                   'serversion', 'attrs', 'positions', 'pending']
 
     def __init__(self, **kwargs):

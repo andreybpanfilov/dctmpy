@@ -125,6 +125,39 @@ class TypedObject(object):
     def add(self, value):
         self.attrs[value.name] = value
 
+    def append(self, name, type, value):
+        values = as_list(value)
+        existing = self.attrs.get(name, None)
+        if existing is None:
+            existing = AttrValue(**{
+                'name': name,
+                'type': type,
+                'repeating': True
+            })
+        if existing.values is None:
+            existing.values = values
+        else:
+            existing.values += values
+        self.add(existing)
+
+    def append_string(self, name, value):
+        self.append(name, STRING, value)
+
+    def append_id(self, name, value):
+        self.append(name, ID, value)
+
+    def append_int(self, name, value):
+        self.append(name, INT, value)
+
+    def append_bool(self, name, value):
+        self.append(name, BOOL, value)
+
+    def append_double(self, name, value):
+        self.append(name, DOUBLE, value)
+
+    def append_time(self, name, value):
+        self.append(name, TIME, value)
+
     def _read_extended_attr(self):
         attr_count = self._read_int()
         for i in xrange(0, attr_count):
@@ -310,27 +343,10 @@ class TypedObject(object):
     def __setitem__(self, key, value):
         if key in self.attrs:
             attr_value = self.attrs[key]
-            if attr_value.repeating:
-                if value is None:
-                    attr_value.values = []
-                elif isinstance(value, list):
-                    attr_value.values = value
-                else:
-                    attr_value.values = [value]
-            else:
-                if value is None:
-                    attr_value.values = []
-                elif isinstance(value, list):
-                    if len(value) > 1:
-                        raise RuntimeError("Single attribute %s does not accept arrays" % key)
-                    elif len(value) == 0:
-                        attr_value.values = []
-                    else:
-                        val = value[0]
-                        if val is None:
-                            attr_value.values = []
-                        else:
-                            attr_value.values = [val]
+            values = as_list(value)
+            if attr_value.repeating and len(values) > 1:
+                raise RuntimeError("Single attribute %s does not accept arrays" % key)
+            attr_value.values = values
         else:
             raise KeyError
 
@@ -362,5 +378,4 @@ class TypedObject(object):
                 primary += data
         if len(extended) == 0:
             return "ATTRIBUTES:%s" % primary
-        return "ATTRIBUTES:%s\nEXTENDED:%s" % ( primary, extended)
-
+        return "ATTRIBUTES:%s\nEXTENDED:%s" % (primary, extended)
