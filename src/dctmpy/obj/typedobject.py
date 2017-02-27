@@ -5,6 +5,10 @@
 from decimal import Decimal
 
 from dctmpy import *
+from dctmpy import ParserException
+from dctmpy.attrinfo import AttrInfo
+from dctmpy.attrvalue import AttrValue
+from dctmpy.typeinfo import TypeInfo
 
 
 class TypedObject(object):
@@ -125,7 +129,36 @@ class TypedObject(object):
     def add(self, value):
         self.attrs[value.name] = value
 
-    def append(self, name, type, value):
+    def _set(self, name, type, value):
+        existing = self.attrs.get(name, None)
+        if existing is None:
+            existing = AttrValue(**{
+                'name': name,
+                'type': type,
+                'repeating': False
+            })
+        existing.values = [value]
+        self.add(existing)
+
+    def set_string(self, name, value):
+        self._set(name, STRING, value)
+
+    def set_id(self, name, value):
+        self._set(name, ID, value)
+
+    def set_int(self, name, value):
+        self._set(name, INT, value)
+
+    def set_bool(self, name, value):
+        self._set(name, BOOL, value)
+
+    def set_double(self, name, value):
+        self._set(name, DOUBLE, value)
+
+    def set_time(self, name, value):
+        self._set(name, TIME, value)
+
+    def _append(self, name, type, value):
         values = as_list(value)
         existing = self.attrs.get(name, None)
         if existing is None:
@@ -141,22 +174,22 @@ class TypedObject(object):
         self.add(existing)
 
     def append_string(self, name, value):
-        self.append(name, STRING, value)
+        self._append(name, STRING, value)
 
     def append_id(self, name, value):
-        self.append(name, ID, value)
+        self._append(name, ID, value)
 
     def append_int(self, name, value):
-        self.append(name, INT, value)
+        self._append(name, INT, value)
 
     def append_bool(self, name, value):
-        self.append(name, BOOL, value)
+        self._append(name, BOOL, value)
 
     def append_double(self, name, value):
-        self.append(name, DOUBLE, value)
+        self._append(name, DOUBLE, value)
 
     def append_time(self, name, value):
-        self.append(name, TIME, value)
+        self._append(name, TIME, value)
 
     def _read_extended_attr(self):
         attr_count = self._read_int()

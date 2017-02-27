@@ -2,7 +2,8 @@
 #
 #  See main module for license.
 #
-from dctmpy import parse_address, AttrValue, STRING, INT
+from dctmpy import parse_address, STRING, INT
+from dctmpy.attrvalue import AttrValue
 from dctmpy.net.request import Request
 from dctmpy.netwise import Netwise
 from dctmpy.obj.docbroker import DocbaseMap

@@ -29,6 +29,9 @@ import platform
 import re
 import time
 
+from dctmpy.exceptions import ParserException
+from dctmpy.typecache import TypeCache
+
 LONG_LOCALES = {
     'Unknown': 0, 'German': 1, 'English_US': 2, 'English_UK': 3, 'Spanish_Modern': 4, 'Spanish_Castilian': 5,
     'Swedish': 6, 'Finnish': 7, 'French': 8, 'French_Canadian': 9, 'Icelandic': 10, 'Italian': 11, 'Dutch': 12,
@@ -205,40 +208,39 @@ DM_CLIENT_IS_DMCL = 1 << 2
 DM_CLIENT_TZ_COMPAT = 0 << 3
 
 CLIENT_VERSION_ARRAY = [
-    0,
-    DM_CLIENT_CONNECT_PROTOCOL,
-    DM_CLIENT_SESSION_RECORD_HINT,
-    DM_CLIENT_SERIALIZATION_VERSION_HINT,
-    0,
-    0,
-    0,
-    0,
-    0,
-    DM_CLIENT_USE_OBDATA
-    + DM_CLIENT_USE_NEW_RPC
-    + DM_CLIENT_IS_DMCL
-    + DM_CLIENT_TZ_COMPAT
+    0, DM_CLIENT_CONNECT_PROTOCOL, DM_CLIENT_SESSION_RECORD_HINT,
+    DM_CLIENT_SERIALIZATION_VERSION_HINT, 0, 0, 0, 0, 0,
+    DM_CLIENT_USE_OBDATA + DM_CLIENT_USE_NEW_RPC + DM_CLIENT_IS_DMCL + DM_CLIENT_TZ_COMPAT
 ]
 
 DEFAULT_BATCH_SIZE = 20
 
 ISO8601_REGEXP = "^([0-9]){4}(-([0-9]){2}){2}T([0-9]{2}:){2}([0-9]){2}Z"
 
+CHUNKS = {
+    RPC_GET_BLOCK1: 256,
+    RPC_GET_BLOCK2: 1024,
+    RPC_GET_BLOCK3: 4096,
+    RPC_GET_BLOCK4: 16384,
+    RPC_GET_BLOCK: 16384,
+    RPC_GET_BLOCK5: 63000,
+    17023: 0
+}
+
 
 def get_platform_id():
     (system, release, version) = platform.system_alias(platform.system(), platform.release(), platform.version())
     if re.match("windows", system, re.I) or re.match("windows", release, re.I):
         return PLATFORMS['MS_WINDOWS']
-    elif re.match("solaris", system, re.I) or re.match("solaris", release, re.I):
+    if re.match("solaris", system, re.I) or re.match("solaris", release, re.I):
         return PLATFORMS['SOLARIS']
-    elif re.match("aix", system, re.I) or re.match("aix", release, re.I):
+    if re.match("aix", system, re.I) or re.match("aix", release, re.I):
         return PLATFORMS['AIX']
-    elif re.match("hpux", system, re.I) or re.match("hpux", release, re.I):
+    if re.match("hpux", system, re.I) or re.match("hpux", release, re.I):
         return PLATFORMS['HP_UX']
-    elif re.match("linux", system, re.I) or re.match("linux", release, re.I):
+    if re.match("linux", system, re.I) or re.match("linux", release, re.I):
         return PLATFORMS['LINUX']
-    else:
-        return 0
+    return 0
 
 
 def get_charset_id():
@@ -248,25 +250,23 @@ def get_charset_id():
     data[2] = data[2].replace("UTF8", "UTF-8")
     if data[2] in CHARSETS:
         return CHARSETS[data[2]]
-    elif (re.match("windows", system, re.I)
-          or re.match("windows", release, re.I)) and "MS" + data[2] in CHARSETS:
+    if (re.match("windows", system, re.I)
+        or re.match("windows", release, re.I)) and "MS" + data[2] in CHARSETS:
         return CHARSETS["MS" + data[2]]
-    else:
-        return 0
+    return 0
 
 
 def get_locale_id():
     data = re.split("_|\.|@", locale.setlocale(locale.LC_ALL, ''))
     if data[0] + "_" + data[1] in SHORT_LOCALES:
         return SHORT_LOCALES[data[0] + "_" + data[1]]
-    elif data[0] + "_" + data[1] in LONG_LOCALES:
+    if data[0] + "_" + data[1] in LONG_LOCALES:
         return LONG_LOCALES[data[0] + "_" + data[1]]
-    elif data[0] in SHORT_LOCALES:
+    if data[0] in SHORT_LOCALES:
         return SHORT_LOCALES[data[0]]
-    elif data[0] in LONG_LOCALES:
+    if data[0] in LONG_LOCALES:
         return LONG_LOCALES[data[0]]
-    else:
-        return LONG_LOCALES['Unknown']
+    return LONG_LOCALES['Unknown']
 
 
 def get_offset_in_seconds():
@@ -279,8 +279,7 @@ def as_list(value):
         return []
     if isinstance(value, list):
         return [] + value
-    else:
-        return [value]
+    return [value]
 
 
 def is_empty(value):
@@ -289,22 +288,19 @@ def is_empty(value):
     if isinstance(value, str):
         if len(value) == 0:
             return True
-        elif value.isspace():
+        if value.isspace():
             return True
-        else:
-            return False
+        return False
     if isinstance(value, bytearray):
         return is_empty(str(value))
     if isinstance(value, list):
         if len(value) == 0:
             return True
-        else:
-            return False
+        return False
     if isinstance(value, dict):
         if len(value) == 0:
             return True
-        else:
-            return False
+        return False
     return False
 
 
@@ -321,22 +317,29 @@ def parse_time(value):
     if is_empty(value) or "nulldate" == value:
         return None
     if re.match(ISO8601_REGEXP, value):
-        chunks = re.split("[-:TZ]", value)
-        if len(chunks) != 7:
-            raise ParserException("Invalid date: %s" % value)
-        return calendar.timegm(
-            [int(chunks[0]), int(chunks[1]), int(chunks[2]),
-             int(chunks[3]), int(chunks[4]), int(chunks[5])])
-    else:
-        chunks = re.split("[: ]", value)
-        if len(chunks) != 6:
-            raise ParserException("Invalid date: %s" % value)
-        if not chunks[0] in MONTHS:
-            raise ParserException("Invalid month: %s" % chunks[0])
-        return time.mktime(
-            [int(chunks[5]), MONTHS[chunks[0]], int(chunks[1]),
-             int(chunks[2]), int(chunks[3]), int(chunks[4]),
-             0, 0, -1])
+        return parse_utc_time(value)
+    return parse_dctm_time(value)
+
+
+def parse_utc_time(value):
+    chunks = re.split("[-:TZ]", value)
+    if len(chunks) != 7:
+        raise ParserException("Invalid date: %s" % value)
+    return calendar.timegm(
+        [int(chunks[0]), int(chunks[1]), int(chunks[2]),
+         int(chunks[3]), int(chunks[4]), int(chunks[5])])
+
+
+def parse_dctm_time(value):
+    chunks = re.split("[: ]", value)
+    if len(chunks) != 6:
+        raise ParserException("Invalid date: %s" % value)
+    if not chunks[0] in MONTHS:
+        raise ParserException("Invalid month: %s" % chunks[0])
+    return time.mktime(
+        [int(chunks[5]), MONTHS[chunks[0]], int(chunks[1]),
+         int(chunks[2]), int(chunks[3]), int(chunks[4]),
+         0, 0, -1])
 
 
 def get_type_from_cache(attrName):
@@ -375,181 +378,8 @@ def get_current_time_mills():
 
 
 def create_chunk(data, offset, rpc):
-    length = len(data) - offset
-    if rpc == RPC_GET_BLOCK1:
-        length = 256
-    elif rpc == RPC_GET_BLOCK2:
-        length = 1024
-    elif rpc == RPC_GET_BLOCK3:
-        length = 4096
-    elif rpc == RPC_GET_BLOCK4 or rpc == RPC_GET_BLOCK:
-        length = 16384
-    elif rpc == RPC_GET_BLOCK5:
-        length = 63000
-    elif rpc == 17023:
-        length = 0
-
+    length = CHUNKS[rpc]
+    length = min(length, len(data) - offset)
     if length == 0:
         return bytearray(), len(data), True
-
-    length = min(length, len(data) - offset)
     return data[offset:offset + length], offset + length, (offset + length) == len(data)
-
-
-class ParserException(RuntimeError):
-    def __init__(self, *args, **kwargs):
-        RuntimeError.__init__(self, *args, **kwargs)
-
-
-class ProtocolException(RuntimeError):
-    def __init__(self, *args, **kwargs):
-        RuntimeError.__init__(self, *args, **kwargs)
-
-
-class TypeCache:
-    class __impl:
-
-        def __init__(self):
-            self.__cache = {}
-
-        def get(self, name):
-            if name in self.__cache:
-                return self.__cache.get(name)
-            return None
-
-        def add(self, typeInfo):
-            superType = typeInfo.super
-            if superType in self.__cache and superType != "NULL":
-                typeInfo.extend(self.get(superType))
-            self.__cache[typeInfo.name] = typeInfo
-
-    __instance = None
-
-    def __init__(self):
-        if not TypeCache.__instance:
-            TypeCache.__instance = TypeCache.__impl()
-        self.__dict__['_TypeCache__instance'] = TypeCache.__instance
-
-    def get(self, typeName):
-        return self.__instance.get(typeName)
-
-    def add(self, typeObj):
-        return self.__instance.add(typeObj)
-
-
-class AttrInfo(object):
-    attributes = ['position', 'name', 'type', 'repeating', 'length', 'restriction']
-
-    def __init__(self, **kwargs):
-        for attribute in AttrInfo.attributes:
-            setattr(self, attribute, kwargs.pop(attribute, None))
-
-    def clone(self):
-        return AttrInfo(**dict((x, getattr(self, x)) for x in AttrInfo.attributes))
-
-
-class AttrValue(object):
-    attributes = ['name', 'type', 'length', 'repeating', 'values', 'extended']
-
-    def __init__(self, **kwargs):
-        for attribute in AttrValue.attributes:
-            setattr(self, attribute, kwargs.pop(attribute, None))
-        self.values = as_list(self.values)
-        if self.repeating is None:
-            self.repeating = False
-        if self.length is None:
-            self.length = 0
-
-    def __len__(self):
-        if self.repeating:
-            return len(self.values)
-        else:
-            return 1
-
-    def __getitem__(self, key):
-        if isinstance(key, slice):
-            return [self[x] for x in xrange(*key.indices(len(self)))]
-        elif isinstance(key, int):
-            if self.repeating:
-                if key > len(self.values):
-                    raise KeyError
-                else:
-                    return self.values[key]
-            else:
-                if key > 0:
-                    raise KeyError
-                else:
-                    if len(self.values) == 0:
-                        return None
-                    else:
-                        return self.values[0]
-        else:
-            raise TypeError("Invalid argument type")
-
-    def __iter__(self):
-        class iterator(object):
-            def __init__(self, obj):
-                self.obj = obj
-                self.index = -1
-
-            def __iter__(self):
-                return self
-
-            def next(self):
-                if self.index < len(self.obj):
-                    self.index += 1
-                    return self.obj[self.index]
-                else:
-                    raise StopIteration
-
-        return iterator(self)
-
-
-class TypeInfo(object):
-    attributes = ['name', 'id', 'vstamp', 'version', 'cache', 'super',
-                  'sharedparent', 'aspectname', 'aspectshareflag',
-                  'serversion', 'attrs', 'positions', 'pending']
-
-    def __init__(self, **kwargs):
-        for attribute in TypeInfo.attributes:
-            setattr(self, attribute, kwargs.pop(attribute, None))
-        if self.super == 'NULL':
-            self.super = None
-        if self.sharedparent == 'NULL':
-            self.sharedparent = None
-        if not self.super and self.sharedparent:
-            self.super = self.sharedparent
-        self.pending = self.super
-        self.attrs = []
-        self.positions = {}
-
-    def append(self, attrInfo):
-        self.attrs.append(attrInfo)
-        if self.serversion > 0:
-            if attrInfo.position > -1:
-                self.positions[attrInfo.position] = attrInfo
-            elif self.name != "GeneratedType":
-                raise RuntimeError("Empty position")
-
-    def insert(self, index, attrInfo):
-        self.attrs.insert(index, attrInfo)
-        if self.serversion > 0:
-            if attrInfo.position > -1:
-                self.positions[attrInfo.position] = attrInfo
-            elif self.name != "GeneratedType":
-                raise RuntimeError("Empty position")
-
-    def get(self, index):
-        if self.serversion > 0:
-            if self.name != "GeneratedType":
-                return self.positions[index]
-        return self.attrs[index]
-
-    def count(self):
-        return len(self.attrs)
-
-    def extend(self, other):
-        if self.pending == other.name:
-            for i in other.attrs[::-1]:
-                self.insert(0, i.clone())
-            self.pending = other.pending

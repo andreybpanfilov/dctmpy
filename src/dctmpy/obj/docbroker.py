@@ -4,6 +4,8 @@
 #
 
 from dctmpy import *
+from dctmpy import ParserException
+from dctmpy.attrvalue import AttrValue
 from dctmpy.obj.typedobject import TypedObject
 
 

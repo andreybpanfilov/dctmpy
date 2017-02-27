@@ -20,7 +20,7 @@ NETWISE_INUMBER = 769
 
 DEFAULT_CHARSET = 'UTF-8'
 
-MAX_REQUEST_LEN = 63000
+MAX_REQUEST_LEN = CHUNKS[RPC_GET_BLOCK5]
 
 
 class DocbaseClient(Netwise):
@@ -403,7 +403,7 @@ class DocbaseClient(Netwise):
         if self._isobfuscated(password):
             return password
         return "".join(
-                "%02x" % [x ^ 0xB6, 0xB6][x == 0xB6] for x in (ord(x) for x in password[::-1])
+            "%02x" % [x ^ 0xB6, 0xB6][x == 0xB6] for x in (ord(x) for x in password[::-1])
         )
 
     def _isobfuscated(self, password):

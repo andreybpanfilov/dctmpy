@@ -2,7 +2,7 @@
 #
 # See main module for license.
 #
-
+from dctmpy.exceptions import ProtocolException
 from dctmpy.net import *
 
 
