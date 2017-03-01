@@ -249,12 +249,13 @@ class DocbaseClient(Netwise):
         if not object_id:
             object_id = NULL_ID
 
-        if isinstance(request, TypedObject):
-            request = request.serialize()
-        if request and len(request) > MAX_REQUEST_LEN:
-            return self.apply_chunks(rpc_id, object_id, method, request, cls)
+        req = request
+        if isinstance(req, TypedObject):
+            req = req.serialize()
+        if req and len(req) > MAX_REQUEST_LEN:
+            return self.apply_chunks(rpc_id, object_id, method, req, cls)
 
-        response = self.rpc(rpc_id, [self._get_method(method), object_id, request])
+        response = self.rpc(rpc_id, [self._get_method(method), object_id, req])
         data = response.data
 
         if rpc_id == RPC_APPLY_FOR_STRING:
