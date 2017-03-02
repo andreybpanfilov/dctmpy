@@ -18,7 +18,7 @@ class Response(object):
 
     def _read_string(self):
         (result, self.offset) = read_string(self.message, self.offset)
-        return str(result)
+        return buffer(result)
 
     def _read_integer(self):
         (result, self.offset) = read_integer(self.message, self.offset)

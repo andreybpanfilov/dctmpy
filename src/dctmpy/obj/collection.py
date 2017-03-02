@@ -26,7 +26,7 @@ class Collection(TypedObject):
         if self.collection is None:
             return None
 
-        if is_empty(self.buffer) and (self.maybemore is None or self.maybemore):
+        if self._is_empty() and (self.maybemore is None or self.maybemore):
             response = self.session.next_batch(self.collection, self.batchsize)
             self.buffer = response.data
             self.records = response.records
@@ -34,7 +34,7 @@ class Collection(TypedObject):
             if self.serversion > 0 and not is_empty(self.buffer):
                 self._read_int()
 
-        if not is_empty(self.buffer) and (self.records is None or self.records > 0):
+        if not self._is_empty() and (self.records is None or self.records > 0):
             try:
                 cls = [CollectionEntry, PersistentCollectionEntry][self.persistent]
                 entry = cls(session=self.session, type=self.type, buffer=self.buffer)

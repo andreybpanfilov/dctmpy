@@ -122,15 +122,13 @@ PLATFORMS = {
     'WINDOWS': 4096, 'UNIX': 8192, 'RESERVED_1': 0, 'RESERVED_2': 1, 'MS_WINDOWS': 4099, 'MACINTOSH': 16388,
     'SUNOS': 8197, 'SOLARIS': 8198, 'HP_UX': 8199, 'AIX': 8200, 'LINUX': 8201, }
 
-DEFAULT_SEPARATOR = '((\r?\n| )+)'
-TYPE_PATTERN = '^(BOOL|INT|STRING|ID|TIME|DOUBLE|UNDEFINED)$'
-ATTRIBUTE_PATTERN = '^.+$'
-REPEATING_PATTERN = '^(R|S)$'
-BASE64_PATTERN = '^[0-9a-zA-Z+/?]+?$'
-INTEGER_PATTERN = '^-?\d+$'
-ENCODING_PATTERN = '^(A|H)$'
-BOOLEAN_PATTERN = '^(T|F|1|0)$'
-CRLF_PATTERN = '\r?\n'
+TYPE_PATTERN = re.compile('^(BOOL|INT|STRING|ID|TIME|DOUBLE|UNDEFINED)$')
+ATTRIBUTE_PATTERN = re.compile('^.+$')
+REPEATING_PATTERN = re.compile('^(R|S)$')
+BASE64_PATTERN = re.compile('^[0-9a-zA-Z+/?]+?$')
+INTEGER_PATTERN = re.compile('^-?\d+$')
+ENCODING_PATTERN = re.compile('^(A|H)$')
+BOOLEAN_PATTERN = re.compile('^(T|F|1|0)$')
 
 SINGLE = "S"
 REPEATING = "R"
@@ -200,7 +198,7 @@ CLIENT_VERSION_STRING = "6.0.0.1 python"
 
 DM_CLIENT_CONNECT_PROTOCOL = 2
 DM_CLIENT_SESSION_RECORD_HINT = -1
-DM_CLIENT_SERIALIZATION_VERSION_HINT = 2
+DM_CLIENT_SERIALIZATION_VERSION_HINT = 1
 
 DM_CLIENT_USE_OBDATA = 1 << 0
 DM_CLIENT_USE_NEW_RPC = 1 << 1
@@ -226,6 +224,9 @@ CHUNKS = {
     RPC_GET_BLOCK5: 63000,
     17023: 0
 }
+
+INT_2_BASE64 = {}
+BASE64_2_INT = {}
 
 
 def get_platform_id():
@@ -285,23 +286,7 @@ def as_list(value):
 def is_empty(value):
     if value is None:
         return True
-    if isinstance(value, str):
-        if len(value) == 0:
-            return True
-        if value.isspace():
-            return True
-        return False
-    if isinstance(value, bytearray):
-        return is_empty(str(value))
-    if isinstance(value, list):
-        if len(value) == 0:
-            return True
-        return False
-    if isinstance(value, dict):
-        if len(value) == 0:
-            return True
-        return False
-    return False
+    return len(value) == 0
 
 
 def parse_address(value):
@@ -350,7 +335,7 @@ def add_type_to_cache(typeObj):
     TypeCache().add(typeObj)
 
 
-def int_to_pseudo_base64(value):
+def _int_to_pseudo_base64(value):
     result = ""
     while value >= 0x40:
         result += ENCODE.get(value & 0x3f)
@@ -359,7 +344,19 @@ def int_to_pseudo_base64(value):
     return result
 
 
+def int_to_pseudo_base64(value):
+    if value not in INT_2_BASE64:
+        INT_2_BASE64[value] = _int_to_pseudo_base64(value)
+    return INT_2_BASE64[value]
+
+
 def pseudo_base64_to_int(value):
+    if value not in BASE64_2_INT:
+        BASE64_2_INT[value] = _pseudo_base64_to_int(value)
+    return BASE64_2_INT[value]
+
+
+def _pseudo_base64_to_int(value):
     result = 0
     for c in list(value)[::-1]:
         if c not in DECODE:

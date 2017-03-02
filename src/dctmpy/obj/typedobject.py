@@ -30,8 +30,11 @@ class TypedObject(object):
             else:
                 self.iso8601time = False
 
-        if not is_empty(self.buffer):
+        if not self._is_empty():
             self._read()
+
+    def _is_empty(self):
+        return is_empty(self.buffer)
 
     def _read(self, buf=None):
         if is_empty(buf) and is_empty(self.buffer):
@@ -221,14 +224,14 @@ class TypedObject(object):
 
     def _read_attr_value(self, attr_type):
         return {
-            INT: lambda: self._read_int(),
-            STRING: lambda: self._read_string(),
-            TIME: lambda: self._read_time(),
-            BOOL: lambda: self._read_boolean(),
-            ID: lambda: self._next_string(),
-            DOUBLE: lambda: self._read_double(),
-            UNDEFINED: lambda: self._next_string()
-        }[attr_type]()
+            INT: TypedObject._read_int,
+            STRING: TypedObject._read_string,
+            TIME: TypedObject._read_time,
+            BOOL: TypedObject._read_boolean,
+            ID: TypedObject._next_string,
+            DOUBLE: TypedObject._read_double,
+            UNDEFINED: TypedObject._next_string
+        }[attr_type](self)
 
     def _read_type_info(self):
         return TypeInfo(**{
@@ -305,24 +308,26 @@ class TypedObject(object):
         return True
 
     def _substr(self, length):
-        data = self.buffer
-        self.buffer = data[length:]
-        return data[:length]
+        result = str(buffer(self.buffer, 0, length))
+        for c in buffer(self.buffer, length):
+            if not c.isspace():
+                break
+            length = length + 1
+        self.buffer = buffer(self.buffer, length)
+        return result
 
-    def _next_token(self, separator=DEFAULT_SEPARATOR):
-        m = re.search(r'^%s' % separator, self.buffer)
-        if m:
-            self._substr(m.end(0))
-        m = re.search(separator, self.buffer)
-        if m:
-            return self._substr(m.start(0))
-        else:
-            return self._substr(len(self.buffer))
+    def _next_token(self):
+        length = 0
+        for c in self.buffer:
+            if c.isspace():
+                break
+            length = length + 1
+        return self._substr(length)
 
-    def _next_string(self, pattern=None, separator=DEFAULT_SEPARATOR):
-        value = self._next_token(separator)
+    def _next_string(self, pattern=None):
+        value = self._next_token()
         if pattern:
-            if not re.match(pattern, value):
+            if not pattern.match(value):
                 raise ParserException("Invalid string: %s for regexp %s" % (value, pattern))
         return value
 
@@ -337,17 +342,15 @@ class TypedObject(object):
         length = self._read_int()
         if encoding == 'H':
             length *= 2
-        result = self._substr(length + 1)[1:]
+        result = self._substr(length)
         if encoding == 'H':
             return result.decode("hex")
         return result
 
     def _read_time(self):
-        value = self._next_token(CRLF_PATTERN)
-        if value.startswith(" "):
-            value = value[1:]
-        if value.startswith("xxx "):
-            value = value[4:]
+        value = self._next_token()
+        if value == "xxx":
+            value = self._substr(20)
         return parse_time(value)
 
     def _read_boolean(self):

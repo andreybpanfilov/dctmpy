@@ -108,6 +108,8 @@ def serialize_value(value):
         return serialize_string("")
     elif isinstance(value, str):
         return serialize_string(value)
+    elif isinstance(value, buffer):
+        return serialize_string(value)
     elif isinstance(value, bytearray):
         return serialize_array(value)
     elif isinstance(value, int):
