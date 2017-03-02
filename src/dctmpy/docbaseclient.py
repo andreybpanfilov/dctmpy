@@ -37,7 +37,7 @@ class DocbaseClient(Netwise):
         }))
 
         self.__collections = dict()
-        self.__reading_messages = False
+        self._reading_messages = False
 
         if self.ser_version is None:
             self.ser_version = 0
@@ -210,12 +210,12 @@ class DocbaseClient(Netwise):
             valid = int(response.next()) > 0
         oob_data = response.next()
 
-        if (oob_data & 0x02 != 0) and not self.__reading_messages:
+        if (oob_data & 0x02 != 0) and not self._reading_messages:
             try:
-                self.__reading_messages = True
+                self._reading_messages = True
                 self._get_messages()
             finally:
-                self.__reading_messages = False
+                self._reading_messages = False
 
         # TODO in some cases (e.g. AUTHENTICATE_USER) CS returns both OBDATA and RESULT
         if oob_data & 0x02 != 0 and len(self.messages) > 0:
@@ -224,7 +224,8 @@ class DocbaseClient(Netwise):
                 raise RuntimeError(reason)
         elif valid is not None and not valid:
             raise RuntimeError("Unknown error")
-        elif len(self.messages) > 0:
+
+        if len(self.messages) > 0:
             logging.debug(self._get_message(0))
 
         if oob_data == 0x10 or (oob_data == 0x01 and rpc_id == RPC_GET_NEXT_PIECE):
@@ -311,15 +312,16 @@ class DocbaseClient(Netwise):
             return ""
         message = ""
         for i in xrange(0, len(self.messages)):
+            local = "[%s]" % self.messages[i]['NAME']
+            if '1' in self.messages[i]:
+                local += " %s" % self.messages[i]['1']
+            if '2' in self.messages[i]:
+                local += ": %s" % self.messages[i]['2']
             if self.messages[i]['SEVERITY'] < severity:
                 continue
             if len(message) > 0:
-                message += ", "
-            message += "[%s]" % self.messages[i]['NAME']
-            if '1' in self.messages[i]:
-                message += " %s" % self.messages[i]['1']
-            if '2' in self.messages[i]:
-                message += ": %s" % self.messages[i]['2']
+                message += "\n"
+            message += local
 
         for i in xrange(len(self.messages) - 1, 1):
             if self.messages[i]['SEVERITY'] >= severity:

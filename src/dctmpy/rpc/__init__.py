@@ -6,7 +6,7 @@ import re
 
 from dctmpy import NULL_ID, RPC_APPLY_FOR_LONG, RPC_APPLY_FOR_TIME, RPC_APPLY_FOR_BOOL, RPC_APPLY_FOR_ID, \
     RPC_APPLY_FOR_STRING, RPC_APPLY, RPC_APPLY_FOR_OBJECT
-from dctmpy.obj.collection import Collection
+from dctmpy.obj.collection import Collection, PersistentCollection
 from dctmpy.obj.entrypoints import EntryPoints
 from dctmpy.obj.persistent import PersistentProxy
 from dctmpy.obj.typedobject import TypedObject
@@ -66,13 +66,26 @@ def register_known_commands(session):
     _register(session, Rpc('TIME', as_time, TypedObject))
     _register(session, Rpc('SET_PUSH_OBJECT_STATUS', as_boolean, TypedObject))
     _register(session, Rpc('PUT_FILE', as_object, TypedObject))
-    _register(session, Rpc('GET_TEMP_FILE', as_object, TypedObject))
-    _register(session, Rpc('GET_FILE', as_object, TypedObject))
+    _register(session, Rpc('GET_TEMP_FILE', as_string, TypedObject))
+    _register(session, Rpc('GET_FILE', as_string, TypedObject))
     _register(session, Rpc('NEXT_ID_LIST', as_next_id_list, TypedObject))
     _register(session, Rpc('CHECKOUT_LICENSE', as_object, TypedObject))
     _register(session, Rpc('SysObjSave', as_save_result, TypedObject, True))
     _register(session, Rpc('SAVE', as_save_result, TypedObject, True))
     _register(session, Rpc('SAVE_CONT_ATTRS', as_save_result, TypedObject, True))
+    _register(session, Rpc('DISABLE_TIMEOUT', as_boolean, TypedObject))
+    _register(session, Rpc('ENABLE_TIMEOUT', as_boolean, TypedObject))
+    _register(session, Rpc('DQL_MATCH', as_collection, PersistentCollection))
+    _register(session, Rpc('DUMP_COUNTS', as_object, TypedObject))
+    _register(session, Rpc('FolderIdFindByPath', as_id, TypedObject))
+    _register(session, Rpc('GETTYPE', as_string, TypedObject, True))
+    _register(session, Rpc('GETTYPENAME', as_string, TypedObject, True))
+    _register(session, Rpc('GET_LAST_SQL', as_string, TypedObject, True))
+    _register(session, Rpc('GET_OBJECT_INFO', as_object, TypedObject))
+    _register(session, Rpc('LOG_MESSAGE', as_boolean, TypedObject))
+    _register(session, Rpc('STAMP_TRACE', as_boolean, TypedObject))
+    _register(session, Rpc('LOG_OFF', as_boolean, TypedObject))
+    _register(session, Rpc('LOG_ON', as_boolean, TypedObject))
 
 
 def _register(session, command):

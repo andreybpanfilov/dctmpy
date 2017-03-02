@@ -297,9 +297,9 @@ class Rpc(object):
         return obj
 
     @staticmethod
-    def set_push_object_status(session, objectId, value):
+    def set_push_object_status(session, object_id, value):
         obj = TypedObject(session=session)
-        obj.set_id("_PUSHED_ID_", objectId)
+        obj.set_id("_PUSHED_ID_", object_id)
         obj.set_bool("_PUSH_STATUS_", value)
         return obj
 
@@ -309,25 +309,25 @@ class Rpc(object):
         return obj
 
     @staticmethod
-    def put_file(session, storageId, file, formatId):
+    def put_file(session, storage_id, file, format):
         obj = TypedObject(session=session)
-        obj.set_id("STORAGE", storageId)
+        obj.set_id("STORAGE", storage_id)
         obj.set_string("FILE", file)
         obj.set_id("FORMAT", format)
         obj.set_bool("MAC_CLIENT", False)
         return obj
 
     @staticmethod
-    def get_file(session, contentId, fileName=None):
-        content = session.get_object(contentId)
+    def get_file(session, content_id, file_name=None):
+        content = session.get_object(content_id)
         obj = TypedObject(session=session)
         obj.set_id("STORAGE", content['storage_id'])
         obj.set_id("FORMAT", content['format'])
         obj.set_id("CONTENT", content['r_object_id'])
         obj.set_int("D_TICKET", content['data_ticket'])
         obj.set_bool("MAC_CLIENT", False)
-        if fileName:
-            obj.set_string("OBJNAME", fileName)
+        if file_name:
+            obj.set_string("OBJNAME", file_name)
         return obj
 
     @staticmethod
@@ -358,3 +358,41 @@ class Rpc(object):
     @staticmethod
     def save_cont_attrs(session, object):
         return object
+
+    @staticmethod
+    def dql_match(session, type, predicate):
+        obj = TypedObject(session=session)
+        obj.set_string("QUERY_TYPE", type)
+        obj.set_string("QUERY_PREDICATE", predicate)
+        return obj
+
+    @staticmethod
+    def folder_id_find_by_path(session, path):
+        obj = TypedObject(session=session)
+        obj.set_string("_FOLDER_PATH_", path)
+        return obj
+
+    @staticmethod
+    def get_object_info(session, object_id, fetch_immutability_status=False):
+        obj = TypedObject(session=session)
+        obj.set_id("OBJECT_ID", object_id)
+        obj.set_bool("FETCH_IMMUTABILITY_STATUS", fetch_immutability_status)
+        return obj
+
+    @staticmethod
+    def log_message(session, message):
+        obj = TypedObject(session=session)
+        obj.set_id("MESSAGE", message)
+        return obj
+
+    @staticmethod
+    def stamp_trace(session, message):
+        obj = TypedObject(session=session)
+        obj.set_id("MESSAGE", message)
+        return obj
+
+    @staticmethod
+    def log_on(session, detail):
+        obj = TypedObject(session=session)
+        obj.set_bool("DETAIL", detail)
+        return obj
