@@ -12,7 +12,7 @@ from dctmpy.typeinfo import TypeInfo
 
 
 class TypedObject(object):
-    attributes = ['session', 'type', 'buffer', 'ser_version', 'iso8601time', 'attrs']
+    attributes = ['session', 'type', 'buffer', 'initial', 'ser_version', 'iso8601time', 'attrs']
 
     def __init__(self, **kwargs):
         for attribute in TypedObject.attributes:
@@ -41,14 +41,13 @@ class TypedObject(object):
             raise ParserException("Empty data")
         elif not is_empty(buf):
             self.buffer = buf
-
+        self.initial = self.buffer
         self._read_header()
-
         if self.type is None and self._need_read_type():
             self.type = self._read_type()
-
         if self._need_read_object():
             self._read_object()
+        self.initial = None
 
     def _read_header(self):
         if self.ser_version > 0:
@@ -307,39 +306,40 @@ class TypedObject(object):
     def _need_read_object(self):
         return True
 
-    def _substr(self, length):
+    def _substr(self, length, trim=-1):
         result = str(buffer(self.buffer, 0, length))
         for c in buffer(self.buffer, length):
-            if not c.isspace():
+            if trim == 0 or not c.isspace():
                 break
-            length = length + 1
+            length += 1
+            trim -= 1
         self.buffer = buffer(self.buffer, length)
         return result
 
-    def _next_token(self):
+    def _next_token(self, trim=-1):
         length = 0
         for c in self.buffer:
             if c.isspace():
                 break
-            length = length + 1
-        return self._substr(length)
+            length += 1
+        return self._substr(length, trim)
 
-    def _next_string(self, pattern=None):
-        value = self._next_token()
+    def _next_string(self, pattern=None, trim=-1):
+        value = self._next_token(trim)
         if pattern:
             if not pattern.match(value):
                 raise ParserException("Invalid string: %s for regexp %s" % (value, pattern))
         return value
 
-    def _read_int(self):
-        return int(self._next_string(INTEGER_PATTERN))
+    def _read_int(self, trim=-1):
+        return int(self._next_string(INTEGER_PATTERN, trim))
 
-    def _read_base64_int(self):
-        return pseudo_base64_to_int(self._next_string(BASE64_PATTERN))
+    def _read_base64_int(self, trim=-1):
+        return pseudo_base64_to_int(self._next_string(BASE64_PATTERN, trim))
 
     def _read_string(self):
         encoding = self._next_string(ENCODING_PATTERN)
-        length = self._read_int()
+        length = self._read_int(1)
         if encoding == 'H':
             length *= 2
         result = self._substr(length)

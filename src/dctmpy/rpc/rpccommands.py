@@ -396,3 +396,35 @@ class Rpc(object):
         obj = TypedObject(session=session)
         obj.set_bool("DETAIL", detail)
         return obj
+
+    @staticmethod
+    def audit_on(session, event):
+        obj = TypedObject(session=session)
+        obj.set_string("EVENT", event)
+        return obj
+
+    @staticmethod
+    def audit_security_failure(session, op_name, message=None):
+        obj = TypedObject(session=session)
+        obj.set_string("OPERATION_NAME", op_name)
+        if message:
+            obj.set_string("ERROR_MESSAGE", message)
+        return obj
+
+    @staticmethod
+    def get_attribute_dd_info(session, type, attribute, policy=NULL_ID, state=0):
+        obj = TypedObject(session=session)
+        obj.set_string("TYPE_NAME", type)
+        obj.set_string("ATTR_NAME", attribute)
+        obj.set_id("POLICY_ID", policy)
+        obj.set_int("POLICY_STATE", state)
+        return obj
+
+    @staticmethod
+    def get_attribute_nls_info(session, type, attribute, policy=NULL_ID, state=0):
+        obj = TypedObject(session=session)
+        obj.set_string("TYPE_NAME", type)
+        obj.set_string("ATTR_NAME", attribute)
+        obj.set_id("POLICY_ID", policy)
+        obj.set_int("POLICY_STATE", state)
+        return obj

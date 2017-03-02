@@ -86,6 +86,13 @@ def register_known_commands(session):
     _register(session, Rpc('STAMP_TRACE', as_boolean, TypedObject))
     _register(session, Rpc('LOG_OFF', as_boolean, TypedObject))
     _register(session, Rpc('LOG_ON', as_boolean, TypedObject))
+    _register(session, Rpc('AUDIT_ON', as_boolean, TypedObject, True))
+    _register(session, Rpc('AUDIT_SECURITY_FAILURE', as_boolean, TypedObject, True))
+    _register(session, Rpc('AnyEvents', as_boolean, TypedObject))
+    _register(session, Rpc('CLIENT_NAME', as_string, TypedObject))
+    _register(session, Rpc('FIX_LINK_CNT', as_boolean, TypedObject, True))
+    _register(session, Rpc('GET_ATTRIBUTE_DD_INFO', as_object, TypedObject))
+    _register(session, Rpc('GET_ATTRIBUTE_NLS_INFO', as_object, TypedObject))
 
 
 def _register(session, command):
