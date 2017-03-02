@@ -11,7 +11,7 @@ else:
 
 setup(
     name='dctmpy',
-    version='0.3',
+    version='0.3.1',
     packages=['dctmpy', 'dctmpy.net', 'dctmpy.obj', 'dctmpy.rpc', 'dctmpy.nagios'],
     package_dir={'': 'src'},
     license='ZPL-2.1',
