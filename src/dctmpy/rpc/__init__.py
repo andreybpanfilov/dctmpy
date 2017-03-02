@@ -68,8 +68,11 @@ def register_known_commands(session):
     _register(session, Rpc('PUT_FILE', as_object, TypedObject))
     _register(session, Rpc('GET_TEMP_FILE', as_object, TypedObject))
     _register(session, Rpc('GET_FILE', as_object, TypedObject))
-    _register(session, Rpc('NEXT_ID_LIST', as_object, TypedObject))
+    _register(session, Rpc('NEXT_ID_LIST', as_next_id_list, TypedObject))
     _register(session, Rpc('CHECKOUT_LICENSE', as_object, TypedObject))
+    _register(session, Rpc('SysObjSave', as_save_result, TypedObject, True))
+    _register(session, Rpc('SAVE', as_save_result, TypedObject, True))
+    _register(session, Rpc('SAVE_CONT_ATTRS', as_save_result, TypedObject, True))
 
 
 def _register(session, command):
@@ -81,6 +84,14 @@ def as_long(session, object_id, method, request=None, cls=None):
     if not object_id:
         object_id = NULL_ID
     return session.apply(RPC_APPLY_FOR_LONG, object_id, method, request, cls)
+
+
+def as_save_result(session, object_id, method, request=None, cls=None):
+    return as_long(session, object_id, method, request, cls) == 1
+
+
+def as_next_id_list(session, object_id, method, request=None, cls=None):
+    return as_object(session, object_id, method, request, cls)['next_id']
 
 
 def as_time(session, object_id, method, request=None, cls=None):

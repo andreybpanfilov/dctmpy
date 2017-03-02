@@ -346,3 +346,15 @@ class Rpc(object):
         obj.set_string("FEATURE_VERSION", feature_version)
         obj.set_string("USER_LOGIN_NAME", user)
         return obj
+
+    @staticmethod
+    def save(session, object):
+        return object
+
+    @staticmethod
+    def sys_obj_save(session, object):
+        return object
+
+    @staticmethod
+    def save_cont_attrs(session, object):
+        return object

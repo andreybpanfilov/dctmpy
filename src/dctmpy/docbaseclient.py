@@ -401,6 +401,9 @@ class DocbaseClient(Netwise):
             raise RuntimeError("Error occurred while executing query: %s" % query, e)
         return collection
 
+    def next_id(self, tag):
+        return self.next_id_list(tag, 1)[0]
+
     def obfuscate(self, password):
         if self._isobfuscated(password):
             return password
