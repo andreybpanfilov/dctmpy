@@ -24,8 +24,8 @@ MAX_REQUEST_LEN = CHUNKS[RPC_GET_BLOCK5]
 
 
 class DocbaseClient(Netwise):
-    attributes = ['docbaseid', 'username', 'password', 'messages', 'entrypoints', 'serversion', 'iso8601time',
-                  'session', 'serversionhint', 'docbaseconfig', 'serverconfg', 'readingmessages', 'knowncommands']
+    attributes = ['docbaseid', 'username', 'password', 'messages', 'entrypoints', 'ser_version', 'iso8601time',
+                  'session', 'ser_version_hint', 'docbaseconfig', 'serverconfg', 'known_commands']
 
     def __init__(self, **kwargs):
         for attribute in DocbaseClient.attributes:
@@ -37,18 +37,18 @@ class DocbaseClient(Netwise):
         }))
 
         self.__collections = dict()
-        self.__readingmessages = False
+        self.__reading_messages = False
 
-        if self.serversion is None:
-            self.serversion = 0
+        if self.ser_version is None:
+            self.ser_version = 0
         if self.iso8601time is None:
             self.iso8601time = False
         if not self.docbaseid >= 0:
             self._resolve_docbase_id()
         if self.messages is None:
             self.messages = []
-        if self.serversionhint is None:
-            self.serversionhint = CLIENT_VERSION_ARRAY[3]
+        if self.ser_version_hint is None:
+            self.ser_version_hint = CLIENT_VERSION_ARRAY[3]
 
         self._connect()
         self._fetch_entry_points()
@@ -125,11 +125,11 @@ class DocbaseClient(Netwise):
         reason = response.next()
         server_version = response.next()
         if server_version[7] == DM_CLIENT_SERIALIZATION_VERSION_HINT:
-            self.serversion = DM_CLIENT_SERIALIZATION_VERSION_HINT
+            self.ser_version = DM_CLIENT_SERIALIZATION_VERSION_HINT
         else:
-            self.serversion = 0
+            self.ser_version = 0
 
-        if self.serversion == 0 or self.serversion == 1:
+        if self.ser_version == 0 or self.ser_version == 1:
             self.iso8601time = False
         else:
             if server_version[9] & 0x01 != 0:
@@ -186,7 +186,7 @@ class DocbaseClient(Netwise):
         if not data:
             data = []
 
-        (valid, o_data, collection, persistent, maybemore, records) = (None, None, None, None, None, None)
+        (valid, oob_data, collection, persistent, may_be_more, record_count) = (None, None, None, None, None, None)
 
         response = self.request(Request, type=rpc_id, data=data)
         message = response.next()
@@ -196,29 +196,29 @@ class DocbaseClient(Netwise):
         elif rpc_id == RPC_APPLY:
             collection = int(response.next())
             persistent = int(response.next()) > 0
-            maybemore = int(response.next()) > 0
+            may_be_more = int(response.next()) > 0
             valid = collection >= 0
         elif rpc_id == RPC_CLOSE_COLLECTION:
             self.__collections.pop(data[1], None)
         elif rpc_id == RPC_GET_NEXT_PIECE:
             pass
         elif rpc_id == RPC_MULTI_NEXT:
-            records = int(response.next())
-            maybemore = int(response.next()) > 0
+            record_count = int(response.next())
+            may_be_more = int(response.next()) > 0
             valid = int(response.next()) > 0
         else:
             valid = int(response.next()) > 0
-        o_data = response.next()
+        oob_data = response.next()
 
-        if (o_data & 0x02 != 0) and not self.__readingmessages:
+        if (oob_data & 0x02 != 0) and not self.__reading_messages:
             try:
-                self.__readingmessages = True
+                self.__reading_messages = True
                 self._get_messages()
             finally:
-                self.__readingmessages = False
+                self.__reading_messages = False
 
         # TODO in some cases (e.g. AUTHENTICATE_USER) CS returns both OBDATA and RESULT
-        if o_data & 0x02 != 0 and len(self.messages) > 0:
+        if oob_data & 0x02 != 0 and len(self.messages) > 0:
             reason = self._get_message(3)
             if len(reason) > 0:
                 raise RuntimeError(reason)
@@ -227,11 +227,12 @@ class DocbaseClient(Netwise):
         elif len(self.messages) > 0:
             logging.debug(self._get_message(0))
 
-        if o_data == 0x10 or (o_data == 0x01 and rpc_id == RPC_GET_NEXT_PIECE):
+        if oob_data == 0x10 or (oob_data == 0x01 and rpc_id == RPC_GET_NEXT_PIECE):
             message += self.rpc(RPC_GET_NEXT_PIECE).data
 
-        return Response(data=message, odata=o_data, persistent=persistent, collection=collection, maybemore=maybemore,
-                        records=records)
+        return Response(data=message, oob_data=oob_data, persistent=persistent, collection=collection,
+                        may_be_more=may_be_more,
+                        record_count=record_count)
 
     def apply_chunks(self, rpc_id, object_id, method, request, cls=Collection):
         if not object_id or object_id == NULL_ID:
@@ -290,12 +291,12 @@ class DocbaseClient(Netwise):
         if response.collection is not None and isinstance(result, Collection):
             result.collection = response.collection
             result.persistent = response.persistent
-            result.records = response.records
-            result.maybemore = response.maybemore
+            result.record_count = response.record_count
+            result.may_be_more = response.may_be_more
             if isinstance(request, TypedObject) and 'BATCH_HINT' in request:
-                result.batchsize = request['BATCH_HINT']
+                result.batch_size = request['BATCH_HINT']
             else:
-                result.batchsize = DEFAULT_BATCH_SIZE
+                result.batch_size = DEFAULT_BATCH_SIZE
 
         if isinstance(result, Collection):
             self.__collections[result.collection] = result
@@ -354,8 +355,8 @@ class DocbaseClient(Netwise):
                 'ENTRY_POINTS': 0,
                 'GET_ERRORS': 558,
             }
-            if self.knowncommands is None:
-                self.knowncommands = {}
+            if self.known_commands is None:
+                self.known_commands = {}
             register_known_commands(self)
             for name in self.entrypoints.keys():
                 self._add_entry_point(name)
@@ -424,16 +425,16 @@ class DocbaseClient(Netwise):
         func = pep_name(name)
         if getattr(DocbaseClient, func, None):
             return
-        elif name in self.knowncommands:
-            command = self.knowncommands[name]
+        elif name in self.known_commands:
+            command = self.known_commands[name]
             method = command.method
-            cls = command.returntype
+            cls = command.return_type
             request = getattr(Rpc, func, None)
-            needid = command.needid
+            need_id = command.need_id
             argc = 0
             if request:
                 argc = request.func_code.co_argcount
-            if needid:
+            if need_id:
                 def inner(self, object_id=NULL_ID, *args):
                     if not request:
                         return method(self, object_id, name, None, cls)
@@ -466,7 +467,7 @@ class DocbaseClient(Netwise):
 
 
 class Response(object):
-    attributes = ['data', 'odata', 'persistent', 'collection', 'records', 'maybemore']
+    attributes = ['data', 'oob_data', 'persistent', 'collection', 'record_count', 'may_be_more']
 
     def __init__(self, **kwargs):
         for attribute in Response.attributes:

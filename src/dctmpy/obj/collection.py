@@ -9,7 +9,7 @@ from dctmpy.obj.typedobject import TypedObject
 
 
 class Collection(TypedObject):
-    attributes = ['collection', 'batchsize', 'records', 'maybemore', 'persistent']
+    attributes = ['collection', 'batch_size', 'record_count', 'may_be_more', 'persistent']
 
     def __init__(self, **kwargs):
         for attribute in Collection.attributes:
@@ -26,23 +26,23 @@ class Collection(TypedObject):
         if self.collection is None:
             return None
 
-        if self._is_empty() and (self.maybemore is None or self.maybemore):
-            response = self.session.next_batch(self.collection, self.batchsize)
+        if self._is_empty() and (self.may_be_more is None or self.may_be_more):
+            response = self.session.next_batch(self.collection, self.batch_size)
             self.buffer = response.data
-            self.records = response.records
-            self.maybemore = response.maybemore
-            if self.serversion > 0 and not is_empty(self.buffer):
+            self.record_count = response.record_count
+            self.may_be_more = response.may_be_more
+            if self.ser_version > 0 and not is_empty(self.buffer):
                 self._read_int()
 
-        if not self._is_empty() and (self.records is None or self.records > 0):
+        if not self._is_empty() and (self.record_count is None or self.record_count > 0):
             try:
                 cls = [CollectionEntry, PersistentCollectionEntry][self.persistent]
                 entry = cls(session=self.session, type=self.type, buffer=self.buffer)
                 self.buffer = entry.buffer
                 return entry
             finally:
-                if self.records is not None:
-                    self.records -= 1
+                if self.record_count is not None:
+                    self.record_count -= 1
         try:
             self.close()
         except Exception, e:
@@ -105,7 +105,7 @@ class CollectionEntry(TypedObject):
 
     def _read(self, buf=None):
         super(CollectionEntry, self)._read(buf)
-        if self.serversion > 0:
+        if self.ser_version > 0:
             self._read_int()
 
 
@@ -114,10 +114,10 @@ class PersistentCollectionEntry(CollectionEntry):
         super(PersistentCollectionEntry, self).__init__(**kwargs)
 
     def _read_header(self):
-        if not self.serversion > 0:
+        if not self.ser_version > 0:
             self._next_string()
 
     def _read(self, buf=None):
         super(PersistentCollectionEntry, self)._read(buf)
-        if self.serversion > 0:
+        if self.ser_version > 0:
             self._read_int()

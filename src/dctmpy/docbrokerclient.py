@@ -2,8 +2,7 @@
 #
 #  See main module for license.
 #
-from dctmpy import parse_address, STRING, INT
-from dctmpy.attrvalue import AttrValue
+from dctmpy import parse_address
 from dctmpy.net.request import Request
 from dctmpy.netwise import Netwise
 from dctmpy.obj.docbroker import DocbaseMap
@@ -25,17 +24,17 @@ class DocbrokerClient(Netwise):
             'inumber': NETWISE_INUMBER,
         }))
 
-    def get_docbasemap(self):
+    def get_docbase_map(self):
         return DocbaseMap(
-            buffer=self._request_object(DocbrokerClient._docbasemap_request(version, handle))
+            buffer=self._request_object(DocbrokerClient._docbase_map_request(version, handle))
         )
 
-    def get_servermap(self, docbase):
-        servermap = DocbaseMap(
-            buffer=self._request_object(DocbrokerClient._servermap_request(version, handle, docbase)))
-        if 'r_host_name' not in servermap:
-            raise RuntimeError("No servers for docbase %s on %s" % (docbase, parse_address(servermap['i_host_addr'])))
-        return servermap
+    def get_server_map(self, docbase):
+        server_map = DocbaseMap(
+            buffer=self._request_object(DocbrokerClient._server_map_request(version, handle, docbase)))
+        if 'r_host_name' not in server_map:
+            raise RuntimeError("No servers for docbase %s on %s" % (docbase, parse_address(server_map['i_host_addr'])))
+        return server_map
 
     def _request_object(self, data):
         try:
@@ -46,21 +45,21 @@ class DocbrokerClient(Netwise):
         return result
 
     @staticmethod
-    def _docbasemap_request(handle, version):
-        obj = TypedObject(serversion=0)
-        obj.add(AttrValue(name="DBR_REQUEST_NAME", type=STRING, values=["DBRN_GET_DOCBASE_MAP"]))
-        obj.add(AttrValue(name="DBR_REQUEST_VERSION", type=INT, values=[1]))
-        obj.add(AttrValue(name="DBR_REQUEST_HANDLE", type=STRING, values=[handle]))
-        obj.add(AttrValue(name="DBR_SOFTWARE_VERSION", type=STRING, values=[version]))
+    def _docbase_map_request(handle, version):
+        obj = TypedObject(ser_version=0)
+        obj.set_string("DBR_REQUEST_NAME", "DBRN_GET_DOCBASE_MAP")
+        obj.set_int("DBR_REQUEST_VERSION", 1)
+        obj.set_string("DBR_REQUEST_HANDLE", handle)
+        obj.set_string("DBR_SOFTWARE_VERSION", version)
         return obj
 
     @staticmethod
-    def _servermap_request(handle, version, docbase):
-        obj = TypedObject(serversion=0)
-        obj.add(AttrValue(name="r_docbase_name", type=STRING, values=[docbase]))
-        obj.add(AttrValue(name="r_map_name", type=STRING, values=["mn_cs_map"]))
-        obj.add(AttrValue(name="DBR_REQUEST_NAME", type=STRING, values=["DBRN_GET_SERVER_MAP"]))
-        obj.add(AttrValue(name="DBR_REQUEST_VERSION", type=INT, values=[1]))
-        obj.add(AttrValue(name="DBR_REQUEST_HANDLE", type=STRING, values=[handle]))
-        obj.add(AttrValue(name="DBR_SOFTWARE_VERSION", type=STRING, values=[version]))
+    def _server_map_request(handle, version, docbase):
+        obj = TypedObject(ser_version=0)
+        obj.set_string("r_docbase_name", docbase)
+        obj.set_string("r_map_name", "mn_cs_map")
+        obj.set_string("DBR_REQUEST_NAME", "DBRN_GET_SERVER_MAP")
+        obj.set_int("DBR_REQUEST_VERSION", 1)
+        obj.set_string("DBR_REQUEST_HANDLE", handle)
+        obj.set_string("DBR_SOFTWARE_VERSION", version)
         return obj

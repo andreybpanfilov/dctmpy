@@ -147,8 +147,7 @@ class UploadRequest(Request):
         (sequence, offset) = read_integer(message, HEADER_SIZE + 2)
 
         (rpc, offset) = read_integer(message, offset)
-        if rpc not in [RPC_GET_BLOCK, RPC_GET_BLOCK1, RPC_GET_BLOCK2, RPC_GET_BLOCK3, RPC_GET_BLOCK4, RPC_GET_BLOCK5,
-                       17023]:
+        if rpc not in CHUNKS:
             raise ProtocolException("Unknown callback rpc: 0x%X" % rpc)
 
         bytes_to_read = message_length - len(message) + HEADER_SIZE

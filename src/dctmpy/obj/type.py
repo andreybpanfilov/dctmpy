@@ -34,7 +34,7 @@ class TypeObject(TypedObject):
 
     def _read_header(self):
         self.__type_count = self._read_int()
-        if self.serversion > 0:
+        if self.ser_version > 0:
             self._read_int()
 
     def _need_read_type(self):

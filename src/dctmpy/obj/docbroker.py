@@ -13,7 +13,7 @@ class DocbrokerObject(TypedObject):
     def __init__(self, **kwargs):
         super(DocbrokerObject, self).__init__(**dict(
             kwargs,
-            **{'serversion': 0}
+            **{'ser_version': 0}
         ))
 
     def _read_type(self):

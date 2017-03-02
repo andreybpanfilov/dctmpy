@@ -12,7 +12,7 @@ from dctmpy.typeinfo import TypeInfo
 
 
 class TypedObject(object):
-    attributes = ['session', 'type', 'buffer', 'serversion', 'iso8601time', 'attrs']
+    attributes = ['session', 'type', 'buffer', 'ser_version', 'iso8601time', 'attrs']
 
     def __init__(self, **kwargs):
         for attribute in TypedObject.attributes:
@@ -21,11 +21,11 @@ class TypedObject(object):
         if self.attrs is None:
             self.attrs = {}
 
-        if self.serversion is None:
-            self.serversion = self.session.serversion
+        if self.ser_version is None:
+            self.ser_version = self.session.ser_version
 
         if self.iso8601time is None:
-            if self.serversion == 2:
+            if self.ser_version == 2:
                 self.iso8601time = self.session.iso8601time
             else:
                 self.iso8601time = False
@@ -51,11 +51,11 @@ class TypedObject(object):
             self._read_object()
 
     def _read_header(self):
-        if self.serversion > 0:
-            serversion = self._read_int()
-            if serversion != self.serversion:
+        if self.ser_version > 0:
+            ser_version = self._read_int()
+            if ser_version != self.ser_version:
                 raise RuntimeError(
-                    "Invalid serialization version %d, expected %d" % (serversion, self.serversion))
+                    "Invalid serialization version %d, expected %d" % (ser_version, self.ser_version))
 
     def _read_type(self):
         header = self._next_token()
@@ -78,7 +78,7 @@ class TypedObject(object):
         if not type_name:
             raise ParserException("Wrong type name")
 
-        if self.serversion > 0:
+        if self.ser_version > 0:
             self._read_int()
             self._read_int()
             self._read_int()
@@ -99,7 +99,7 @@ class TypedObject(object):
         repeating = self.type.get(position).repeating
         attr_type = self.type.get(position).type
 
-        if self.serversion == 2:
+        if self.ser_version == 2:
             repeating = self._next_string(REPEATING_PATTERN) == REPEATING
             entry_type = self._read_int()
             if entry_type in TYPES:
@@ -244,7 +244,7 @@ class TypedObject(object):
             'sharedparent': self._if_d6(self._next_string, None, ATTRIBUTE_PATTERN),
             'aspectname': self._if_d6(self._next_string, None, ATTRIBUTE_PATTERN),
             'aspectshareflag': self._if_d6(self._read_boolean),
-            'serversion': self.serversion,
+            'ser_version': self.ser_version,
         })
 
     def _read_attr_info(self):
@@ -258,16 +258,16 @@ class TypedObject(object):
         })
 
     def _if_d6(self, method, default=None, *args, **kwargs):
-        if self.serversion > 0:
+        if self.ser_version > 0:
             return method(*args, **kwargs)
         return default
 
     def serialize(self):
         result = ""
-        if self.serversion > 0:
-            result += "%d\n" % self.serversion
+        if self.ser_version > 0:
+            result += "%d\n" % self.ser_version
         result += "OBJ NULL 0 "
-        if self.serversion > 0:
+        if self.ser_version > 0:
             result += "0 0\n0\n"
         result += "%d\n" % len(self.attrs)
         for attr_value in self.attrs.values():

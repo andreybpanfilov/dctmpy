@@ -1,7 +1,7 @@
 class TypeInfo(object):
     attributes = ['name', 'id', 'vstamp', 'version', 'cache', 'super',
                   'sharedparent', 'aspectname', 'aspectshareflag',
-                  'serversion', 'attrs', 'positions', 'pending']
+                  'ser_version', 'attrs', 'positions', 'pending']
 
     def __init__(self, **kwargs):
         for attribute in TypeInfo.attributes:
@@ -18,7 +18,7 @@ class TypeInfo(object):
 
     def append(self, attrInfo):
         self.attrs.append(attrInfo)
-        if self.serversion <= 0:
+        if self.ser_version <= 0:
             return
         if attrInfo.position > -1:
             self.positions[attrInfo.position] = attrInfo
@@ -27,7 +27,7 @@ class TypeInfo(object):
 
     def insert(self, index, attrInfo):
         self.attrs.insert(index, attrInfo)
-        if self.serversion <= 0:
+        if self.ser_version <= 0:
             return
         if attrInfo.position > -1:
             self.positions[attrInfo.position] = attrInfo
@@ -36,7 +36,7 @@ class TypeInfo(object):
             raise RuntimeError("Empty position")
 
     def get(self, index):
-        if self.serversion > 0:
+        if self.ser_version > 0:
             if not self.is_generated():
                 return self.positions[index]
         return self.attrs[index]

@@ -19,7 +19,7 @@ class PersistentProxy(TypedObject):
         type_name = self._next_string(ATTRIBUTE_PATTERN)
         self._next_string(ATTRIBUTE_PATTERN)
         stamp = 0
-        if self.serversion > 0:
+        if self.ser_version > 0:
             stamp = self._read_int()
         return self.session.get_type(type_name, stamp)
 

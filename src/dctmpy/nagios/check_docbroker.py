@@ -22,7 +22,7 @@ class CheckDocbroker(Resource):
         docbroker = DocbrokerClient(host=self.host, port=self.port, secure=self.args.secure, ciphers=CIPHERS)
         try:
             start = get_current_time_mills()
-            docbasemap = docbroker.get_docbasemap()
+            docbasemap = docbroker.get_docbase_map()
             yield Metric('docbase_map_time', get_current_time_mills() - start, "ms", min=0, context=TIME_THRESHOLDS)
 
             if not docbasemap['r_docbase_name']:
@@ -62,7 +62,7 @@ class CheckDocbroker(Resource):
                     continue
 
                 try:
-                    servermap = docbroker.get_servermap(docbase)
+                    servermap = docbroker.get_server_map(docbase)
                     for (server, address) in servers[docbase]:
                         if not server:
                             # server name was not defined - checking all servers

@@ -11,7 +11,7 @@ class EntryPoints(TypedObject):
         self.__methods = None
         super(EntryPoints, self).__init__(**dict(
             kwargs,
-            **{'serversion': 0}
+            **{'ser_version': 0}
         ))
 
     def _read(self, buf=None):

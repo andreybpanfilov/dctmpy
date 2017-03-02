@@ -7,13 +7,13 @@ from dctmpy.obj.typedobject import TypedObject
 
 
 class Rpc(object):
-    attributes = ['command', 'method', 'returntype', 'needid']
+    attributes = ['command', 'method', 'return_type', 'need_id']
 
-    def __init__(self, command, method, returntype, needid):
+    def __init__(self, command, method, return_type, need_id=False):
         self.command = command
         self.method = method
-        self.returntype = returntype
-        self.needid = needid
+        self.return_type = return_type
+        self.need_id = need_id
 
     @staticmethod
     def set_locale(session, charset=get_charset_id()):

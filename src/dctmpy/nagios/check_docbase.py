@@ -95,7 +95,7 @@ class CheckDocbase(Resource):
                                     secure=self.args.secure, ciphers=CIPHERS)
 
         try:
-            docbasemap = docbroker.get_docbasemap()
+            docbasemap = docbroker.get_docbase_map()
         except Exception, e:
             message = "Unable to retrieve docbasemap from docbroker %s:%d: %s" % (
                 docbrokerhost, docbrokerport, str(e))
@@ -108,7 +108,7 @@ class CheckDocbase(Resource):
             return
 
         try:
-            servermap = docbroker.get_servermap(docbaseame)
+            servermap = docbroker.get_server_map(docbaseame)
         except Exception, e:
             message = "Unable to retrieve servermap from docbroker %s:%d: %s" % (
                 docbrokerhost, docbrokerport, str(e))
