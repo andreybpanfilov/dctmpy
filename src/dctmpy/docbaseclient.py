@@ -252,6 +252,8 @@ class DocbaseClient(Netwise):
             object_id = NULL_ID
 
         req = request
+        if object_id != NULL_ID and req is None:
+            req = TypedObject(session=self)
         if isinstance(req, TypedObject):
             req = req.serialize()
         if req and len(req) > MAX_REQUEST_LEN:

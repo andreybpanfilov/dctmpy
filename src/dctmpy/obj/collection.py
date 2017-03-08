@@ -39,6 +39,7 @@ class Collection(TypedObject):
                 cls = [CollectionEntry, PersistentCollectionEntry][self.persistent]
                 entry = cls(session=self.session, type=self.type, buffer=self.buffer)
                 self.buffer = entry.buffer
+                entry.buffer = None
                 return entry
             finally:
                 if self.record_count is not None:

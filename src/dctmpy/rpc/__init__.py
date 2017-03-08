@@ -4,7 +4,8 @@
 #
 import re
 
-from dctmpy import NULL_ID, RPC_APPLY_FOR_LONG, RPC_APPLY_FOR_TIME, RPC_APPLY_FOR_BOOL, RPC_APPLY_FOR_ID, \
+from dctmpy import NULL_ID, RPC_APPLY_FOR_LONG, \
+    RPC_APPLY_FOR_TIME, RPC_APPLY_FOR_BOOL, RPC_APPLY_FOR_ID, \
     RPC_APPLY_FOR_STRING, RPC_APPLY, RPC_APPLY_FOR_OBJECT
 from dctmpy.obj.collection import Collection, PersistentCollection
 from dctmpy.obj.entrypoints import EntryPoints
@@ -73,8 +74,6 @@ def register_known_commands(session):
     _register(session, Rpc('SysObjSave', as_save_result, TypedObject, True))
     _register(session, Rpc('SAVE', as_save_result, TypedObject, True))
     _register(session, Rpc('SAVE_CONT_ATTRS', as_save_result, TypedObject, True))
-    _register(session, Rpc('DISABLE_TIMEOUT', as_boolean, TypedObject))
-    _register(session, Rpc('ENABLE_TIMEOUT', as_boolean, TypedObject))
     _register(session, Rpc('DQL_MATCH', as_collection, PersistentCollection))
     _register(session, Rpc('DUMP_COUNTS', as_object, TypedObject))
     _register(session, Rpc('FolderIdFindByPath', as_id, TypedObject))
@@ -93,6 +92,7 @@ def register_known_commands(session):
     _register(session, Rpc('FIX_LINK_CNT', as_boolean, TypedObject, True))
     _register(session, Rpc('GET_ATTRIBUTE_DD_INFO', as_object, TypedObject))
     _register(session, Rpc('GET_ATTRIBUTE_NLS_INFO', as_object, TypedObject))
+    _register(session, Rpc('GET_CONTENT_HASH', as_string, TypedObject, True))
 
 
 def _register(session, command):
