@@ -12,7 +12,7 @@ from dctmpy.obj.persistent import PersistentProxy
 from dctmpy.obj.type import TypeObject
 from dctmpy.obj.typedobject import TypedObject
 from dctmpy.rpc import pep_name, register_known_commands, as_collection
-from dctmpy.rpc.messages import get_message
+from dctmpy.rpc.messages import get_message, ERROR, INFORMATION
 from dctmpy.rpc.rpccommands import Rpc
 
 NETWISE_VERSION = 3
@@ -213,13 +213,12 @@ class DocbaseClient(Netwise):
 
         # TODO in some cases (e.g. AUTHENTICATE_USER) CS returns both OOBDATA and RESULT
         if has_messages and len(self.messages) > 0:
-            reason = self._get_message(3)
-            if len(reason) > 0:
+            reason = self._get_message(ERROR)
+            self._log_messages()
+            if reason:
                 raise RuntimeError(reason)
         elif valid is not None and not valid:
             raise RuntimeError("Unknown error")
-
-        self._log_messages()
 
         if oob_data == 0x10 or (oob_data == 0x01 and rpc_id == RPC_GET_NEXT_PIECE):
             message += self.rpc(RPC_GET_NEXT_PIECE).data
@@ -304,29 +303,36 @@ class DocbaseClient(Netwise):
             return
         try:
             self.reading_messages = True
-            self.messages = [x for x in self.get_errors()]
+            for message in self.get_errors():
+                self.messages.append(message)
         finally:
             self.reading_messages = False
 
     def _log_messages(self):
-        if len(self.messages) > 0:
-            logging.debug(self._get_message(0))
+        message = self._get_message(INFORMATION)
+        if message:
+            logging.debug(message)
 
-    def _get_message(self, severity=0):
-        if not self.messages:
-            return ""
-        result = ""
-        for i in xrange(len(self.messages) - 1, -1, -1):
-            message = self.messages[i]
-            if message['SEVERITY'] < severity:
-                continue
-            message = self.messages.pop(i)
-            local = self._format_message(message)
-            if len(result) > 0:
-                result += "\n"
-            result += local
-
-        return result
+    def _get_message(self, severity=INFORMATION):
+        if self.reading_messages or len(self.messages) == 0:
+            return None
+        try:
+            self.reading_messages = True
+            messages = []
+            for i in xrange(len(self.messages) - 1, -1, -1):
+                message = self.messages[i]
+                if message['SEVERITY'] < severity:
+                    continue
+                messages.append(self.messages.pop(i))
+            result = ""
+            for message in messages:
+                local = self._format_message(message)
+                if len(result) > 0:
+                    result += "\n"
+                result += local
+            return result
+        finally:
+            self.reading_messages = False
 
     def _format_message(self, message):
         template = get_message(message)
@@ -338,14 +344,7 @@ class DocbaseClient(Netwise):
                 return template.format(*args)
             except:
                 pass
-        # todo: [DM_SESSION_I_SESSION_START]info:  "Session s started for user s."
-        # template = self.process_new_server_message(message['CODE'])
-        template = "[%s]" % message['NAME']
-        if len(args) > 0:
-            template += " %s" % args[0]
-        if len(args) > 1:
-            template += ": %s" % args[1]
-        return template
+        return self.process_new_server_message(message)
 
     def authenticate(self, username=None, password=None):
         if username and password:

@@ -430,7 +430,5 @@ class Rpc(object):
         return obj
 
     @staticmethod
-    def process_new_server_message(session, code):
-        obj = TypedObject(session=session)
-        obj.set_int("CODE", code)
-        return obj
+    def process_new_server_message(session, message):
+        return message
