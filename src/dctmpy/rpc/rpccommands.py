@@ -428,3 +428,9 @@ class Rpc(object):
         obj.set_id("POLICY_ID", policy)
         obj.set_int("POLICY_STATE", state)
         return obj
+
+    @staticmethod
+    def process_new_server_message(session, code):
+        obj = TypedObject(session=session)
+        obj.set_int("CODE", code)
+        return obj

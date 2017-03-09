@@ -12,6 +12,7 @@ from dctmpy.obj.persistent import PersistentProxy
 from dctmpy.obj.type import TypeObject
 from dctmpy.obj.typedobject import TypedObject
 from dctmpy.rpc import pep_name, register_known_commands, as_collection
+from dctmpy.rpc.messages import get_message
 from dctmpy.rpc.rpccommands import Rpc
 
 NETWISE_VERSION = 3
@@ -24,8 +25,10 @@ MAX_REQUEST_LEN = CHUNKS[RPC_GET_BLOCK5]
 
 
 class DocbaseClient(Netwise):
-    attributes = ['docbaseid', 'username', 'password', 'messages', 'entrypoints', 'ser_version', 'iso8601time',
-                  'session', 'ser_version_hint', 'docbaseconfig', 'serverconfg', 'known_commands']
+    attributes = ['docbaseid', 'username', 'password', 'messages', 'entrypoints',
+                  'ser_version', 'iso8601time', 'session', 'ser_version_hint',
+                  'docbaseconfig', 'serverconfg', 'known_commands', 'reading_messages',
+                  'collections']
 
     def __init__(self, **kwargs):
         for attribute in DocbaseClient.attributes:
@@ -36,8 +39,8 @@ class DocbaseClient(Netwise):
             'inumber': NETWISE_INUMBER,
         }))
 
-        self.__collections = dict()
-        self._reading_messages = False
+        self.collections = dict()
+        self.reading_messages = False
 
         if self.ser_version is None:
             self.ser_version = 0
@@ -91,12 +94,12 @@ class DocbaseClient(Netwise):
                 raise e
 
     def disconnect(self):
-        for collection in self.__collections.values():
+        for collection in self.collections.values():
             collection.close()
         self._disconnect()
 
     def _reconnect(self):
-        ''
+        pass
 
     def _disconnect(self):
         if not self.session:
@@ -111,16 +114,9 @@ class DocbaseClient(Netwise):
             self.session = None
 
     def _connect(self):
-        response = self.request(Request,
-                                type=RPC_NEW_SESSION_BY_ADDR,
-                                data=[
-                                    self.docbaseid,
-                                    EMPTY_STRING,
-                                    CLIENT_VERSION_STRING,
-                                    EMPTY_STRING,
-                                    CLIENT_VERSION_ARRAY,
-                                    NULL_ID,
-                                ])
+        data = [self.docbaseid, EMPTY_STRING, CLIENT_VERSION_STRING,
+                EMPTY_STRING, CLIENT_VERSION_ARRAY, NULL_ID, ]
+        response = self.request(Request, type=RPC_NEW_SESSION_BY_ADDR, data=data)
 
         reason = response.next()
         server_version = response.next()
@@ -199,7 +195,7 @@ class DocbaseClient(Netwise):
             may_be_more = int(response.next()) > 0
             valid = collection >= 0
         elif rpc_id == RPC_CLOSE_COLLECTION:
-            self.__collections.pop(data[1], None)
+            self.collections.pop(data[1], None)
         elif rpc_id == RPC_GET_NEXT_PIECE:
             pass
         elif rpc_id == RPC_MULTI_NEXT:
@@ -210,29 +206,26 @@ class DocbaseClient(Netwise):
             valid = int(response.next()) > 0
         oob_data = response.next()
 
-        if (oob_data & 0x02 != 0) and not self._reading_messages:
-            try:
-                self._reading_messages = True
-                self._get_messages()
-            finally:
-                self._reading_messages = False
+        has_messages = oob_data & 0x02 != 0
 
-        # TODO in some cases (e.g. AUTHENTICATE_USER) CS returns both OBDATA and RESULT
-        if oob_data & 0x02 != 0 and len(self.messages) > 0:
+        if has_messages:
+            self._get_messages()
+
+        # TODO in some cases (e.g. AUTHENTICATE_USER) CS returns both OOBDATA and RESULT
+        if has_messages and len(self.messages) > 0:
             reason = self._get_message(3)
             if len(reason) > 0:
                 raise RuntimeError(reason)
         elif valid is not None and not valid:
             raise RuntimeError("Unknown error")
 
-        if len(self.messages) > 0:
-            logging.debug(self._get_message(0))
+        self._log_messages()
 
         if oob_data == 0x10 or (oob_data == 0x01 and rpc_id == RPC_GET_NEXT_PIECE):
             message += self.rpc(RPC_GET_NEXT_PIECE).data
 
-        return Response(data=message, oob_data=oob_data, persistent=persistent, collection=collection,
-                        may_be_more=may_be_more,
+        return Response(data=message, oob_data=oob_data, persistent=persistent,
+                        collection=collection, may_be_more=may_be_more,
                         record_count=record_count)
 
     def apply_chunks(self, rpc_id, object_id, method, request, cls=Collection):
@@ -263,9 +256,9 @@ class DocbaseClient(Netwise):
         data = response.data
 
         if rpc_id == RPC_APPLY_FOR_STRING:
-            return data
+            return str(data)
         elif rpc_id == RPC_APPLY_FOR_ID:
-            return data
+            return str(data)
         elif rpc_id == RPC_APPLY_FOR_DOUBLE:
             return data
         elif rpc_id == RPC_APPLY_FOR_BOOL:
@@ -302,34 +295,57 @@ class DocbaseClient(Netwise):
                 result.batch_size = DEFAULT_BATCH_SIZE
 
         if isinstance(result, Collection):
-            self.__collections[result.collection] = result
+            self.collections[result.collection] = result
 
         return result
 
     def _get_messages(self):
-        self.messages = [x for x in self.get_errors()]
+        if self.reading_messages:
+            return
+        try:
+            self.reading_messages = True
+            self.messages = [x for x in self.get_errors()]
+        finally:
+            self.reading_messages = False
+
+    def _log_messages(self):
+        if len(self.messages) > 0:
+            logging.debug(self._get_message(0))
 
     def _get_message(self, severity=0):
         if not self.messages:
             return ""
-        message = ""
-        for i in xrange(0, len(self.messages)):
-            local = "[%s]" % self.messages[i]['NAME']
-            if '1' in self.messages[i]:
-                local += " %s" % self.messages[i]['1']
-            if '2' in self.messages[i]:
-                local += ": %s" % self.messages[i]['2']
-            if self.messages[i]['SEVERITY'] < severity:
+        result = ""
+        for i in xrange(len(self.messages) - 1, -1, -1):
+            message = self.messages[i]
+            if message['SEVERITY'] < severity:
                 continue
-            if len(message) > 0:
-                message += "\n"
-            message += local
+            message = self.messages.pop(i)
+            local = self._format_message(message)
+            if len(result) > 0:
+                result += "\n"
+            result += local
 
-        for i in xrange(len(self.messages) - 1, 1):
-            if self.messages[i]['SEVERITY'] >= severity:
-                self.messages.pop(i)
+        return result
 
-        return message
+    def _format_message(self, message):
+        template = get_message(message)
+        args = []
+        for i in xrange(1, message['COUNT'] + 1):
+            args.append(message[str(i)])
+        if template:
+            try:
+                return template.format(*args)
+            except:
+                pass
+        # todo: [DM_SESSION_I_SESSION_START]info:  "Session s started for user s."
+        # template = self.process_new_server_message(message['CODE'])
+        template = "[%s]" % message['NAME']
+        if len(args) > 0:
+            template += " %s" % args[0]
+        if len(args) > 1:
+            template += ": %s" % args[1]
+        return template
 
     def authenticate(self, username=None, password=None):
         if username and password:

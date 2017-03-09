@@ -93,6 +93,7 @@ def register_known_commands(session):
     _register(session, Rpc('GET_ATTRIBUTE_DD_INFO', as_object, TypedObject))
     _register(session, Rpc('GET_ATTRIBUTE_NLS_INFO', as_object, TypedObject))
     _register(session, Rpc('GET_CONTENT_HASH', as_string, TypedObject, True))
+    _register(session, Rpc('PROCESS_NEW_SERVER_MESSAGE', as_string, TypedObject, False))
 
 
 def _register(session, command):
