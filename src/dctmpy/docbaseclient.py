@@ -5,8 +5,8 @@
 import logging
 
 from dctmpy import *
+from dctmpy.net.netwise import Netwise
 from dctmpy.net.request import Request, DownloadRequest, UploadRequest
-from dctmpy.netwise import Netwise
 from dctmpy.obj.collection import Collection, PersistentCollection
 from dctmpy.obj.persistent import PersistentProxy
 from dctmpy.obj.type import TypeObject
@@ -28,7 +28,7 @@ class DocbaseClient(Netwise):
     attributes = ['docbaseid', 'username', 'password', 'messages', 'entrypoints',
                   'ser_version', 'iso8601time', 'session', 'ser_version_hint',
                   'docbaseconfig', 'serverconfg', 'known_commands', 'reading_messages',
-                  'collections']
+                  'collections', 'identity']
 
     def __init__(self, **kwargs):
         for attribute in DocbaseClient.attributes:
@@ -57,21 +57,13 @@ class DocbaseClient(Netwise):
         self._fetch_entry_points()
         self._set_locale()
 
-        if self.password and self.username:
+        if self._can_authenticate():
             self.authenticate()
 
     def _resolve_docbase_id(self):
-        response = self.request(Request,
-                                type=RPC_NEW_SESSION_BY_ADDR,
-                                data=[
-                                    -1,
-                                    EMPTY_STRING,
-                                    CLIENT_VERSION_STRING,
-                                    EMPTY_STRING,
-                                    CLIENT_VERSION_ARRAY,
-                                    NULL_ID,
-                                ])
-
+        data = [-1, EMPTY_STRING, CLIENT_VERSION_STRING,
+                EMPTY_STRING, CLIENT_VERSION_ARRAY, NULL_ID, ]
+        response = self.request(Request, type=RPC_NEW_SESSION_BY_ADDR, data=data)
         reason = response.next()
         m = re.search('Wrong docbase id: \(-1\) expecting: \((\d+)\)', reason)
         if m:
@@ -84,14 +76,13 @@ class DocbaseClient(Netwise):
         try:
             self.set_locale(charset)
         except Exception, e:
-            if e.message.startswith('DM_SESSION_E_NO_TRANSLATOR'):
-                if charset == CHARSETS[DEFAULT_CHARSET]:
-                    raise e
-                logging.warning("Unable to set charset %s, falling back to %s"
-                                % (CHARSETS_REVERSE[charset], DEFAULT_CHARSET))
-                self.set_locale(CHARSETS[DEFAULT_CHARSET])
-            else:
+            if not e.message.startswith('[DM_SESSION_E_NO_TRANSLATOR]'):
                 raise e
+            if charset == CHARSETS[DEFAULT_CHARSET]:
+                raise e
+            logging.warning("Unable to set charset %s, falling back to %s"
+                            % (CHARSETS_REVERSE[charset], DEFAULT_CHARSET))
+            self.set_locale(CHARSETS[DEFAULT_CHARSET])
 
     def disconnect(self):
         for collection in self.collections.values():
@@ -346,16 +337,27 @@ class DocbaseClient(Netwise):
                 pass
         return self.process_new_server_message(message)
 
-    def authenticate(self, username=None, password=None):
-        if username and password:
-            self.username = username
-            self.password = password
+    def _can_authenticate(self):
         if not self.username:
-            raise RuntimeError("Empty username")
+            return False
+        if self.identity and self.identity.trusted:
+            return True
         if not self.password:
-            raise RuntimeError("Empty password")
+            return False
+        return True
 
-        result = self.authenticate_user(self.username, self.obfuscate(self.password))
+    def authenticate(self, username=None, password=None, identity=None):
+        if username:
+            self.username = username
+        if password:
+            self.password = password
+        if identity:
+            self.identity = identity
+
+        if not self._can_authenticate():
+            raise RuntimeError("Can't perform authentication")
+
+        result = self.authenticate_user(self.username, self.obfuscate(self.password), self.identity)
         if result['RETURN_VALUE'] != 1:
             raise RuntimeError("Unable to authenticate")
 
@@ -424,10 +426,13 @@ class DocbaseClient(Netwise):
         return self.next_id_list(tag, 1)[0]
 
     def obfuscate(self, password):
+        if not password:
+            return None
         if self._isobfuscated(password):
             return password
         return "".join(
-            "%02x" % [x ^ 0xB6, 0xB6][x == 0xB6] for x in (ord(x) for x in password[::-1])
+            "%02x" % [x ^ 0xB6, 0xB6][x == 0xB6]
+            for x in (ord(x) for x in password[::-1])
         )
 
     def _isobfuscated(self, password):

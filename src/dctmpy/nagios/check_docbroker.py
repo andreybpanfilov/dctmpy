@@ -4,7 +4,6 @@ import argparse
 import re
 
 from nagiosplugin import Check, Resource, guarded, Result, Metric, ScalarContext
-
 from nagiosplugin.state import Critical, Ok, Unknown
 
 from dctmpy import get_current_time_mills
@@ -57,7 +56,8 @@ class CheckDocbroker(Resource):
 
             for docbase in servers.keys():
                 if docbase not in docbasemap['r_docbase_name']:
-                    message = "Docbase %s is not registered on %s:%d" % (docbase, self.host, self.port)
+                    message = "Docbase %s is not registered on %s:%d" % \
+                              (docbase, self.host, self.port)
                     self.add_result(Critical, message)
                     continue
 
@@ -69,35 +69,36 @@ class CheckDocbroker(Resource):
                             for i in xrange(0, len(servermap['r_server_name'])):
                                 (name, host, status) = self.get_server_info(servermap, i)
                                 if status == 'Open':
-                                    message = "Server %s.%s is registered on %s:%d" % (
-                                        docbase, name, self.host, self.port)
+                                    message = "Server %s.%s is registered on %s:%d" % \
+                                              (docbase, name, self.host, self.port)
                                     self.add_result(Ok, message)
                                     continue
-                                message = "Server %s.%s has status %s on %s:%d" % (
-                                    docbase, name, status, self.host, self.port)
+                                message = "Server %s.%s has status %s on %s:%d" % \
+                                          (docbase, name, status, self.host, self.port)
                                 self.add_result(Critical, message)
                             break
 
                         if server not in servermap['r_server_name']:
-                            message = "Server %s.%s is not registered on %s:%d" % (
-                                docbase, server, self.host, self.port)
+                            message = "Server %s.%s is not registered on %s:%d" % \
+                                      (docbase, server, self.host, self.port)
                             self.add_result(Critical, message)
                             continue
 
                         index = servermap['r_server_name'].index(server)
                         (_, host, status) = self.get_server_info(servermap, index)
                         if address and host != address:
-                            message = "Server %s.%s (status: %s) is registered on %s:%d with wrong ip address: %s, expected: %s" % (
-                                docbase, server, status, self.host, self.port, host, address)
+                            message = "Server %s.%s (status: %s) is registered on %s:%d " \
+                                      "with wrong ip address: %s, expected: %s" % \
+                                      (docbase, server, status, self.host, self.port, host, address)
                             self.add_result(Critical, message)
                             continue
                         if status == 'Open':
-                            message = "Server %s.%s@%s is registered on %s:%d" % (
-                                docbase, server, host, self.host, self.port)
+                            message = "Server %s.%s@%s is registered on %s:%d" % \
+                                      (docbase, server, host, self.host, self.port)
                             self.add_result(Ok, message)
                             continue
-                        message = "Server %s.%s@%s has status %s on %s:%d" % (
-                            docbase, server, host, status, self.host, self.port)
+                        message = "Server %s.%s@%s has status %s on %s:%d" % \
+                                  (docbase, server, host, status, self.host, self.port)
                         self.add_result(Critical, message)
 
                     if not self.fullmap:
@@ -110,12 +111,13 @@ class CheckDocbroker(Resource):
                     for i in xrange(0, len(servermap['r_server_name'])):
                         (server, host, status) = self.get_server_info(servermap, i)
                         if (server, host) not in servers[docbase] and (server, None) not in servers[docbase]:
-                            message = "Malicious server %s.%s@%s (status: %s) is registered on %s:%d" % (
-                                docbase, server, host, status, self.host, self.port)
+                            message = "Malicious server %s.%s@%s (status: %s) is registered on %s:%d" % \
+                                      (docbase, server, host, status, self.host, self.port)
                             self.add_result(Critical, message)
 
                 except Exception, e:
-                    message = "Failed to retrieve servermap for docbase %s: %s" % (docbase, str(e))
+                    message = "Failed to retrieve servermap for docbase %s: %s" % \
+                              (docbase, str(e))
                     self.add_result(Critical, message)
                     continue
 
@@ -123,8 +125,8 @@ class CheckDocbroker(Resource):
             for docbase in docbasemap['r_docbase_name']:
                 if docbase in servers:
                     continue
-                message = "Malicious docbase %s is registered on %s:%d" % (
-                    docbase, self.host, self.port)
+                message = "Malicious docbase %s is registered on %s:%d" % \
+                          (docbase, self.host, self.port)
                 self.add_result(Critical, message)
 
         except Exception, e:

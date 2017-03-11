@@ -4,7 +4,7 @@
 #
 
 from dctmpy import *
-from dctmpy import ParserException
+from dctmpy.exceptions import ParserException
 from dctmpy.obj.typedobject import TypedObject
 
 

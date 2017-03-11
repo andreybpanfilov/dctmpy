@@ -41,13 +41,20 @@ class Rpc(object):
         return obj
 
     @staticmethod
-    def authenticate_user(session, username, password):
+    def authenticate_user(session, username, password, identity=None):
         obj = TypedObject(session=session)
         obj.set_bool("CONNECT_POOLING", False)
         obj.set_string("USER_PASSWORD", password)
         obj.set_bool("AUTHENTICATION_ONLY", False)
         obj.set_bool("CHECK_ONLY", False)
         obj.set_string("LOGON_NAME", username)
+        if identity:
+            if identity.trusted:
+                obj.set_bool("TRUSTED_LOGIN_ALLOWED", True)
+                obj.set_string("OS_LOGON_NAME", username)
+            auth_data = identity.get_auth_data()
+            if auth_data:
+                obj.set_string("CLIENT_AUTH_DATA", auth_data)
         return obj
 
     @staticmethod

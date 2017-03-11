@@ -1,5 +1,5 @@
 class AttrInfo(object):
-    attributes = ['position', 'name', 'type', 'repeating', 'length', 'restriction']
+    attributes = ['position', 'name', 'type', 'repeating', 'length', 'restriction', 'extended']
 
     def __init__(self, **kwargs):
         for attribute in AttrInfo.attributes:

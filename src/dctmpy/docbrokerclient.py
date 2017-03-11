@@ -3,8 +3,8 @@
 #  See main module for license.
 #
 from dctmpy import parse_address
+from dctmpy.net.netwise import Netwise
 from dctmpy.net.request import Request
-from dctmpy.netwise import Netwise
 from dctmpy.obj.docbroker import DocbaseMap
 from dctmpy.obj.typedobject import TypedObject
 

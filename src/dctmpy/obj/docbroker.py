@@ -4,8 +4,8 @@
 #
 
 from dctmpy import *
-from dctmpy import ParserException
-from dctmpy.attrvalue import AttrValue
+from dctmpy.exceptions import ParserException
+from dctmpy.obj.attrvalue import AttrValue
 from dctmpy.obj.typedobject import TypedObject
 
 

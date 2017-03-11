@@ -5,10 +5,10 @@
 from decimal import Decimal
 
 from dctmpy import *
-from dctmpy import ParserException
-from dctmpy.attrinfo import AttrInfo
-from dctmpy.attrvalue import AttrValue
-from dctmpy.typeinfo import TypeInfo
+from dctmpy.exceptions import ParserException
+from dctmpy.obj.attrinfo import AttrInfo
+from dctmpy.obj.attrvalue import AttrValue
+from dctmpy.obj.typeinfo import TypeInfo
 
 
 class TypedObject(object):
@@ -240,9 +240,9 @@ class TypedObject(object):
             'version': self._if_d6(self._read_int),
             'cache': self._if_d6(self._read_int),
             'super': self._next_string(ATTRIBUTE_PATTERN),
-            'sharedparent': self._if_d6(self._next_string, None, ATTRIBUTE_PATTERN),
-            'aspectname': self._if_d6(self._next_string, None, ATTRIBUTE_PATTERN),
-            'aspectshareflag': self._if_d6(self._read_boolean),
+            'shared_parent': self._if_d6(self._next_string, None, ATTRIBUTE_PATTERN),
+            'aspect_name': self._if_d6(self._next_string, None, ATTRIBUTE_PATTERN),
+            'aspect_share_flag': self._if_d6(self._read_boolean),
             'ser_version': self.ser_version,
         })
 

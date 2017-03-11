@@ -59,10 +59,10 @@ class CheckDocbase(Resource):
         try:
             count = self.session.count_sessions()
         except Exception, e:
-            self.add_result(Critical, "Unable to retrieve session count: " + str(e))
+            self.add_result(Critical, "Unable to retrieve session count: %s" % str(e))
             return
-        yield Metric('sessioncount', int(count['hot_list_size']), min=0,
-                     max=int(count['concurrent_sessions']),
+        yield Metric('sessioncount', int(count['hot_list_size']),
+                     min=0, max=int(count['concurrent_sessions']),
                      context=THRESHOLDS)
 
     def check_uptime(self):
@@ -70,10 +70,10 @@ class CheckDocbase(Resource):
             start = self.session.list_sessions()['root_start']
             uptime = self.session.time() - start
         except Exception, e:
-            self.add_result(Critical, "Unable to retrieve session list: " + str(e))
+            self.add_result(Critical, "Unable to retrieve session list: %s" % str(e))
             return
-        yield CustomMetric('uptime', int(uptime), "s", min=0, context=THRESHOLDS).add_message(
-            "CS uptime is %s" % pretty_interval(uptime))
+        yield CustomMetric('uptime', int(uptime), "s", min=0, context=THRESHOLDS) \
+            .add_message("CS uptime is %s" % pretty_interval(uptime))
 
     def check_targets(self):
         targets = []
@@ -97,27 +97,28 @@ class CheckDocbase(Resource):
         try:
             docbasemap = docbroker.get_docbase_map()
         except Exception, e:
-            message = "Unable to retrieve docbasemap from docbroker %s:%d: %s" % (
-                docbrokerhost, docbrokerport, str(e))
+            message = "Unable to retrieve docbasemap from docbroker %s:%d: %s" % \
+                      (docbrokerhost, docbrokerport, str(e))
             self.add_result(Critical, message)
             return
 
         if docbaseame not in docbasemap['r_docbase_name']:
-            message = "docbase %s is not registered on %s:%d" % (docbaseame, docbrokerhost, docbrokerport)
+            message = "docbase %s is not registered on %s:%d" % \
+                      (docbaseame, docbrokerhost, docbrokerport)
             self.add_result(Critical, message)
             return
 
         try:
             servermap = docbroker.get_server_map(docbaseame)
         except Exception, e:
-            message = "Unable to retrieve servermap from docbroker %s:%d: %s" % (
-                docbrokerhost, docbrokerport, str(e))
+            message = "Unable to retrieve servermap from docbroker %s:%d: %s" % \
+                      (docbrokerhost, docbrokerport, str(e))
             self.add_result(Critical, message)
             return
 
         if servername not in servermap['r_server_name']:
-            message = "server %s.%s is not registered on %s:%d" % (
-                docbaseame, servername, docbrokerhost, docbrokerport)
+            message = "server %s.%s is not registered on %s:%d" % \
+                      (docbaseame, servername, docbrokerhost, docbrokerport)
             self.add_result(Critical, message)
             return
 
@@ -127,8 +128,9 @@ class CheckDocbase(Resource):
         connaddr = servermap['i_server_connection_address'][index]
 
         if status != "Open":
-            message = "%s.%s has status %s on %s:%d, " % (
-                docbaseame, servername, status, docbrokerhost, docbrokerport)
+            message = "%s.%s has status %s on %s:%d, " % \
+                      (docbaseame, servername, status,
+                       docbrokerhost, docbrokerport)
             self.add_result(Critical, message)
             return
 
@@ -138,17 +140,20 @@ class CheckDocbase(Resource):
 
         session = None
         try:
-            session = DocbaseClient(host=host, port=port + [0, 1][self.args.secure], docbaseid=docbaseid,
-                                    secure=self.args.secure,
+            session = DocbaseClient(host=host, port=port + [0, 1][self.args.secure],
+                                    docbaseid=docbaseid, secure=self.args.secure,
                                     ciphers=CIPHERS)
         except Exception, e:
-            message = "%s.%s has status %s on %s:%d, but error occurred during connection to %s" % (
-                docbaseame, servername, status, docbrokerhost, docbrokerport, str(e))
+            message = "%s.%s has status %s on %s:%d, " \
+                      "but error occurred whilst connecting to %s" % \
+                      (docbaseame, servername, status,
+                       docbrokerhost, docbrokerport, str(e))
             self.add_result(Critical, message)
             return
         if session:
-            message = "%s.%s has status %s on %s:%d" % (
-                docbaseame, servername, status, docbrokerhost, docbrokerport)
+            message = "%s.%s has status %s on %s:%d" % \
+                      (docbaseame, servername, status,
+                       docbrokerhost, docbrokerport)
             self.add_result(Ok, message)
             try:
                 session.disconnect()
@@ -175,20 +180,24 @@ class CheckDocbase(Resource):
             )
             status = result['status'][0]
             if status == 0:
-                message = "Indexagent %s/%s is up and running" % (index_name, agent_name)
+                message = "Indexagent %s/%s is up and running" % \
+                          (index_name, agent_name)
                 self.add_result(Ok, message)
             elif status == 100:
-                message = "Indexagent %s/%s is stopped" % (index_name, agent_name)
+                message = "Indexagent %s/%s is stopped" % \
+                          (index_name, agent_name)
                 self.add_result(Warn, message)
             elif status == 200:
-                message = "A problem with indexagent %s/%s" % (index_name, agent_name)
+                message = "A problem with indexagent %s/%s" % \
+                          (index_name, agent_name)
                 self.add_result(Critical, message)
             else:
-                message = "Indexagent %s/%s has unknown status" % (index_name, agent_name)
+                message = "Indexagent %s/%s has unknown status" % \
+                          (index_name, agent_name)
                 self.add_result(Unknown, message)
         except Exception, e:
-            message = "Unable to get indexagent %s/%s status: %s" % (
-                index_name, agent_name, str(e))
+            message = "Unable to get indexagent %s/%s status: %s" % \
+                      (index_name, agent_name, str(e))
             self.add_result(Critical, message)
 
     def check_jobs(self):
@@ -268,37 +277,53 @@ class CheckDocbase(Resource):
 
     def check_job(self, job, now, check_scheduling=True):
         if not job['start_date'] > -1:
-            message = "%s has undefined start_date" % job['object_name']
+            message = "%s has undefined start_date" % \
+                      job['object_name']
             return Result(Critical, message)
         if not job['a_next_invocation'] > -1:
-            message = "%s has undefined next_invocation_date" % job['object_name']
+            message = "%s has undefined next_invocation_date" % \
+                      job['object_name']
             return Result(Critical, message)
         if -1 < job['expiration_date'] < job['start_date']:
-            message = "%s has expiration_date less then start_date" % job['object_name']
+            message = "%s has expiration_date less then start_date" % \
+                      job['object_name']
             return Result(Critical, message)
         if job['max_iterations'] < 0:
-            message = "%s has invalid max_iterations value: %d" % (
-                (job['object_name']), (job['max_iterations']))
+            message = "%s has invalid max_iterations value: %d" % \
+                      ((job['object_name']), (job['max_iterations']))
             return Result(Critical, message)
-        if job['run_mode'] == 0 and job['run_interval'] == 0 and job['max_iterations'] != 1:
-            message = "%s has invalid max_iterations value for run_mode=0 and run_interval=0" % job[
-                'object_name']
+        if job['run_mode'] == 0 and job['run_interval'] == 0 \
+                and job['max_iterations'] != 1:
+            message = "%s has invalid max_iterations value for " \
+                      "run_mode=0 and run_interval=0" % \
+                      job['object_name']
             return Result(Critical, message)
-        if 1 <= job['run_mode'] <= 4 and not (1 <= job['run_interval'] <= 32767):
-            message = "%s has invalid run_interval value, expected [1, 32767], got %d" % (
-                job['object_name'], job['run_interval'])
+        if 1 <= job['run_mode'] <= 4 \
+                and not (1 <= job['run_interval'] <= 32767):
+            message = "%s has invalid run_interval value, " \
+                      "expected [1, 32767], got %d" % \
+                      (job['object_name'], job['run_interval'])
             return Result(Critical, message)
-        if job['run_mode'] == 7 and not (-7 <= job['run_interval'] <= 7 and job['run_interval'] != 0):
-            message = "%s has invalid run_interval value, expected [-7,0) U (0,7], got %d" % (
-                job['object_name'], job['run_interval'])
+        if job['run_mode'] == 7 \
+                and not (-7 <= job['run_interval'] <= 7
+                         and job['run_interval'] != 0):
+            message = "%s has invalid run_interval value, " \
+                      "expected [-7,0) U (0,7], got %d" % \
+                      (job['object_name'], job['run_interval'])
             return Result(Critical, message)
-        if job['run_mode'] == 8 and not (-28 <= job['run_interval'] <= 28 and job['run_interval'] != 0):
-            message = "%s has invalid run_interval value, expected [-28,0) U (0,28], got %d" % (
-                job['object_name'], job['run_interval'])
+        if job['run_mode'] == 8 \
+                and not (-28 <= job['run_interval'] <= 28
+                         and job['run_interval'] != 0):
+            message = "%s has invalid run_interval value, " \
+                      "expected [-28,0) U (0,28], got %d" % \
+                      (job['object_name'], job['run_interval'])
             return Result(Critical, message)
-        if job['run_mode'] == 9 and not (-365 <= job['run_interval'] <= 365 and job['run_interval'] != 0):
-            message = "%s has invalid run_interval value, expected [-365,0) U (0,365], got %d" % (
-                job['object_name'], job['run_interval'])
+        if job['run_mode'] == 9 \
+                and not (-365 <= job['run_interval'] <= 365
+                         and job['run_interval'] != 0):
+            message = "%s has invalid run_interval value, " \
+                      "expected [-365,0) U (0,365], got %d" % \
+                      (job['object_name'], job['run_interval'])
             return Result(Critical, message)
         if job['is_inactive']:
             message = "%s is inactive" % job['object_name']
@@ -316,31 +341,32 @@ class CheckDocbase(Resource):
         time_diff = now - job['a_last_completion']
 
         if not check_scheduling:
-            message = "%s last run - %s ago" % ((job['object_name']), pretty_interval(time_diff))
+            message = "%s last run - %s ago" % \
+                      ((job['object_name']), pretty_interval(time_diff))
             return Result(Ok, message)
 
         if job['a_last_return_code'] != 0:
-            message = "%s has status: %s" % ((job['object_name']), (job['a_current_status']))
+            message = "%s has status: %s" % \
+                      ((job['object_name']), (job['a_current_status']))
             return Result(Critical, message)
-        if re.match('agentexec', job['a_special_app']) or (
-                        job['a_last_invocation'] > -1 and not job['a_last_completion']):
-            message = "%s is running for %s" % (
-                job['object_name'], pretty_interval(now - job['a_last_invocation']))
+        if re.match('agentexec', job['a_special_app']) or \
+                (job['a_last_invocation'] > -1 and not job['a_last_completion']):
+            message = "%s is running for %s" % \
+                      (job['object_name'], pretty_interval(now - job['a_last_invocation']))
             return Result(Ok, message)
 
         if 1 <= job['run_mode'] <= 4:
-            message = "%s last run - %s ago" % ((job['object_name']), pretty_interval(time_diff))
-            if time_diff > [self.args.critical, 2][self.args.critical is None] * JOB_INTERVALS[job['run_mode']] * job[
-                'run_interval']:
+            period = JOB_INTERVALS[job['run_mode']] * job['run_interval']
+            message = "%s last run - %s ago" % \
+                      ((job['object_name']), pretty_interval(time_diff))
+            if time_diff > [self.args.critical, 2][self.args.critical is None] * period:
                 return Result(Critical, message)
-            elif time_diff > [self.args.warning, 1][
-                        self.args.warning is None] * JOB_INTERVALS[job['run_mode']] * job['run_interval']:
+            if time_diff > [self.args.warning, 1][self.args.warning is None] * period:
                 return Result(Warn, message)
-            else:
-                return Result(Ok, message)
-        else:
-            message = "Scheduling type for job %s is not currently supported" % job['object_name']
-            return Result(Unknown, message)
+            return Result(Ok, message)
+        message = "Scheduling type for job %s is not currently supported" % \
+                  job['object_name']
+        return Result(Unknown, message)
 
     def check_time_skew(self):
         try:
@@ -532,8 +558,9 @@ class CheckDocbase(Resource):
                 try:
                     acs = self.session.get_object(rec['r_object_id'])
                     for i in xrange(0, len(acs['acs_base_url'])):
-                        for metric in self.check_app_server('acs', acs['acs_base_url'][i],
-                                                            "%s_%s" % (acs['r_object_id'], i)):
+                        url = acs['acs_base_url'][i]
+                        name = "%s_%s" % (acs['r_object_id'], i)
+                        for metric in self.check_app_server('acs', url, name):
                             if metric:
                                 yield metric
                 except Exception, e:
@@ -555,17 +582,17 @@ class CheckDocbase(Resource):
                 try:
                     xplore = self.session.get_object(rec['r_object_id'])
                     prop = dict(zip(xplore['param_name'], xplore['param_value']))
-                    url = "%s://%s:%s%s" % (
-                        prop['dsearch_qrserver_protocol'].lower(),
-                        prop['dsearch_qrserver_host'],
-                        prop['dsearch_qrserver_port'],
-                        prop['dsearch_qrserver_target']
-                    )
+                    url = "%s://%s:%s%s" % \
+                          (prop['dsearch_qrserver_protocol'].lower(),
+                           prop['dsearch_qrserver_host'],
+                           prop['dsearch_qrserver_port'],
+                           prop['dsearch_qrserver_target'])
                     for metric in self.check_app_server('dsearch', url, xplore['r_object_id']):
                         if metric:
                             yield metric
                 except Exception, e:
-                    message = "Unable to retrieve ft_engine config %s: %s" % (rec['r_object_id'], str(e))
+                    message = "Unable to retrieve ft_engine config %s: %s" % \
+                              (rec['r_object_id'], str(e))
                     self.add_result(Critical, message)
             if count == 0:
                 message = "No xPlore instances"
@@ -616,7 +643,8 @@ class CheckDocbase(Resource):
             else:
                 response = urlopen(url, data=data, timeout=APP_SERVER_TIMEOUT)
             if response.code != 200:
-                message = "Unable to open %s (instance: %s): response code %d" % (url, instance_name, response.code)
+                message = "Unable to open %s (instance: %s): response code %d" % \
+                          (url, instance_name, response.code)
                 self.add_result(Critical, message)
                 return
 
@@ -626,20 +654,24 @@ class CheckDocbase(Resource):
             try:
                 xmldoc = minidom.parseString(response.read())
                 status = xmldoc.getElementsByTagName("message-id")[0].firstChild.nodeValue
-                message = "CTS Agent for instance \"%s\" has status \"%s\"" % (instance_name, status)
+                message = "CTS Agent for instance \"%s\" has status \"%s\"" % \
+                          (instance_name, status)
                 if status != "RUNNING":
                     self.add_result(Critical, message)
                 else:
                     self.add_result(Ok, message)
             except Exception, e:
-                message = "Unable to parse xml response (instance: %s): %s" % (instance_name, str(e))
+                message = "Unable to parse xml response (instance: %s): %s" % \
+                          (instance_name, str(e))
                 self.add_result(Critical, message)
 
         except URLError, e:
-            message = "Unable to open %s (instance: %s): %s" % (url, instance_name, e.reason)
+            message = "Unable to open %s (instance: %s): %s" % \
+                      (url, instance_name, e.reason)
             self.add_result(Critical, message)
         except Exception, e:
-            message = "Unable to open %s (instance: %s): %s" % (url, instance_name, str(e))
+            message = "Unable to open %s (instance: %s): %s" % \
+                      (url, instance_name, str(e))
             self.add_result(Critical, message)
 
     def check_app_server(self, name, url, metric_name):
@@ -653,7 +685,8 @@ class CheckDocbase(Resource):
             start = get_current_time_mills()
             response = urlopen(url, timeout=APP_SERVER_TIMEOUT)
             if not (response.code >= 200 and response < 300):
-                message = "Unable to open %s: response code %d" % (url, response.code)
+                message = "Unable to open %s: response code %d" % \
+                          (url, response.code)
                 self.add_result(Critical, message)
                 return
 
@@ -663,7 +696,8 @@ class CheckDocbase(Resource):
 
             expected = APP_SERVER_RESPONSES[name]
             if expected not in response.read():
-                message = "text \"%s\" not found in response from %s" % (expected, url)
+                message = "text \"%s\" not found in response from %s" % \
+                          (expected, url)
                 self.add_result(Critical, message)
                 return
 
@@ -700,7 +734,8 @@ class CheckDocbase(Resource):
                     yield Metric('authentication_time', get_current_time_mills() - start, "ms", min=0,
                                  context=TIME_THRESHOLDS)
             except Exception, e:
-                message = "user %s is unable to authenticate: %s" % (self.login, str(e))
+                message = "failed to authenticate as user %s: %s" % \
+                          (self.login, str(e))
                 self.add_result(Critical, message)
                 try:
                     session.disconnect()

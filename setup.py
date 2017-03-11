@@ -4,14 +4,14 @@ from setuptools import setup
 
 if sys.version_info < (2, 7):
     extras_require = {'nagios': ['argparse', 'nagiosplugin>=1.2.2']}
-    install_requires = ["pyOpenSSL"]
+    install_requires = ["pyOpenSSL", "pyjks"]
 else:
     extras_require = {'nagios': ['nagiosplugin>=1.2.2']}
-    install_requires = []
+    install_requires = ["pyjks"]
 
 setup(
     name='dctmpy',
-    version='0.3.1',
+    version='0.3.2',
     packages=['dctmpy', 'dctmpy.net', 'dctmpy.obj', 'dctmpy.rpc', 'dctmpy.nagios'],
     package_dir={'': 'src'},
     license='ZPL-2.1',

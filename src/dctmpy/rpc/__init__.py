@@ -2,11 +2,8 @@
 #
 #  See main module for license.
 #
-import re
 
-from dctmpy import NULL_ID, RPC_APPLY_FOR_LONG, \
-    RPC_APPLY_FOR_TIME, RPC_APPLY_FOR_BOOL, RPC_APPLY_FOR_ID, \
-    RPC_APPLY_FOR_STRING, RPC_APPLY, RPC_APPLY_FOR_OBJECT
+from dctmpy import *
 from dctmpy.obj.collection import Collection, PersistentCollection
 from dctmpy.obj.entrypoints import EntryPoints
 from dctmpy.obj.persistent import PersistentProxy

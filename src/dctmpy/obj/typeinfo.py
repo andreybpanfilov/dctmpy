@@ -1,6 +1,6 @@
 class TypeInfo(object):
     attributes = ['name', 'id', 'vstamp', 'version', 'cache', 'super',
-                  'sharedparent', 'aspectname', 'aspectshareflag',
+                  'shared_parent', 'aspect_name', 'aspect_share_flag',
                   'ser_version', 'attrs', 'positions', 'pending']
 
     def __init__(self, **kwargs):
@@ -8,29 +8,29 @@ class TypeInfo(object):
             setattr(self, attribute, kwargs.pop(attribute, None))
         if self.super == 'NULL':
             self.super = None
-        if self.sharedparent == 'NULL':
-            self.sharedparent = None
-        if not self.super and self.sharedparent:
-            self.super = self.sharedparent
+        if self.shared_parent == 'NULL':
+            self.shared_parent = None
+        if not self.super and self.shared_parent:
+            self.super = self.shared_parent
         self.pending = self.super
         self.attrs = []
         self.positions = {}
 
-    def append(self, attrInfo):
-        self.attrs.append(attrInfo)
+    def append(self, attr_info):
+        self.attrs.append(attr_info)
         if self.ser_version <= 0:
             return
-        if attrInfo.position > -1:
-            self.positions[attrInfo.position] = attrInfo
+        if attr_info.position > -1:
+            self.positions[attr_info.position] = attr_info
         elif not self.is_generated():
             raise RuntimeError("Empty position")
 
-    def insert(self, index, attrInfo):
-        self.attrs.insert(index, attrInfo)
+    def insert(self, index, attr_info):
+        self.attrs.insert(index, attr_info)
         if self.ser_version <= 0:
             return
-        if attrInfo.position > -1:
-            self.positions[attrInfo.position] = attrInfo
+        if attr_info.position > -1:
+            self.positions[attr_info.position] = attr_info
             return
         if not self.is_generated():
             raise RuntimeError("Empty position")

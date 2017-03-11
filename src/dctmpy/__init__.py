@@ -30,7 +30,7 @@ import re
 import time
 
 from dctmpy.exceptions import ParserException
-from dctmpy.typecache import TypeCache
+from dctmpy.obj.typecache import TypeCache
 
 LONG_LOCALES = {
     'Unknown': 0, 'German': 1, 'English_US': 2, 'English_UK': 3, 'Spanish_Modern': 4, 'Spanish_Castilian': 5,

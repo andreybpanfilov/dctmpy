@@ -34,7 +34,7 @@ class AttrValue(object):
         return self.values[0]
 
     def __iter__(self):
-        class iterator(object):
+        class Iterator(object):
             def __init__(self, obj):
                 self.obj = obj
                 self.index = -1
@@ -48,4 +48,4 @@ class AttrValue(object):
                 self.index += 1
                 return self.obj[self.index]
 
-        return iterator(self)
+        return Iterator(self)
