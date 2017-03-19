@@ -122,6 +122,18 @@ def get_jobs(session, jobs=None, condition=""):
     return read_query(session, query)
 
 
+def get_stores(session, stores=None, condition=""):
+    query = "SELECT r_object_id, name FROM dm_store"
+    if is_empty(condition):
+        if stores:
+            query += " WHERE name IN ('" + "','".join(stores) + "')"
+    else:
+        query += " WHERE (%s)" % condition
+        if stores:
+            query += " AND name IN ('" + "','".join(stores) + "')"
+    return read_query(session, query)
+
+
 def read_object(session, query):
     results = read_query(session, query, 1)
     if results:

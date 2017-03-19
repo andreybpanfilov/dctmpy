@@ -140,9 +140,10 @@ class CheckDocbase(Resource):
 
         session = None
         try:
-            session = DocbaseClient(host=host, port=port + [0, 1][self.args.secure],
-                                    docbaseid=docbaseid, secure=self.args.secure,
-                                    ciphers=CIPHERS)
+            session = DocbaseClient(
+                host=host, port=port + [0, 1][self.args.secure],
+                docbaseid=docbaseid, secure=self.args.secure,
+                ciphers=CIPHERS)
         except Exception, e:
             message = "%s.%s has status %s on %s:%d, " \
                       "but error occurred whilst connecting to %s" % \
@@ -750,6 +751,53 @@ class CheckDocbase(Resource):
             status = [Warn, Critical][self.mode != 'login']
             self.add_result(status, message)
 
+    def check_stores(self):
+        stores_to_check = None
+        if not is_empty(self.stores):
+            if isinstance(self.stores, list):
+                stores_to_check = list(self.stores)
+            elif isinstance(self.stores, str):
+                stores_to_check = re.split(',\s*', self.stores)
+            else:
+                raise RuntimeError("Wrong stores argument")
+
+        try:
+            for store in get_stores(self.session, stores_to_check):
+                if stores_to_check and store['name'] in stores_to_check:
+                    stores_to_check.remove(store['name'])
+                result = self.check_store(store)
+                self.add_result(result[0], result[1])
+        except Exception, e:
+            message = "Unable to execute query: %s" % str(e)
+            self.add_result(Critical, message)
+            return
+
+        if not is_empty(stores_to_check):
+            message = ""
+            for store in stores_to_check:
+                message += "%s not found, " % store
+            self.add_result(Critical, message)
+
+    def check_store(self, store):
+        query = "SELECT r_object_id FROM dmr_content WHERE storage_id='%s'" % store['r_object_id']
+        content = None
+        for c in self.session.query(query):
+            content = self.session.get_object(c['r_object_id'])
+            if content['full_content_size'] > 0:
+                break
+            else:
+                content = None
+        if not content:
+            message = "No content in store %s" % store['name']
+            return Result(Ok, message)
+        try:
+            for c in content.get_content():
+                pass
+            return Result(Ok, "Store %s is ok" % store['name'])
+        except Exception, e:
+            message = "Unable to retrieve content from store %s: %s" % (store['name'], str(e))
+            return Result(Critical, message)
+
     def add_result(self, state, message):
         self.results.add(Result(state, message))
 
@@ -781,6 +829,7 @@ modes = {
     'ctsstatus': [CheckDocbase.check_cts_status, False, True, "check CTS connectivity"],
     'acsstatus': [CheckDocbase.check_acs_status, False, True, "check ACS connectivity"],
     'xplorestatus': [CheckDocbase.check_xplore_status, False, True, "check xPlore connectivity"],
+    'checkstore': [CheckDocbase.check_stores, False, True, "check store"],
 }
 
 
@@ -793,26 +842,33 @@ def main():
     argp.add_argument('-l', '--login', metavar='username', help='username')
     argp.add_argument('-a', '--authentication', metavar='password', help='password')
     argp.add_argument('-s', '--secure', action='store_true', help='use ssl')
-    argp.add_argument('-t', '--timeout', metavar='timeout', default=60, type=int,
-                      help='check timeout, default is 60 seconds')
-    argp.add_argument('-m', '--mode', required=True, metavar='mode',
-                      help="mode to use, one of: " + ", ".join("%s (%s)" % (x, modes[x][3]) for x in modes.keys()))
+    argp.add_argument(
+        '-t', '--timeout', metavar='timeout', default=60, type=int,
+        help='check timeout, default is 60 seconds')
+    argp.add_argument(
+        '-m', '--mode', required=True, metavar='mode',
+        help="mode to use, one of: " + ", ".join("%s (%s)" % (x, modes[x][3]) for x in modes.keys()))
     argp.add_argument('-j', '--jobs', metavar='jobs', default='', help='jobs to check, comma-separated list')
     argp.add_argument('-n', '--name', metavar='name', default='', help='name of check that appears in output')
     argp.add_argument('-q', '--query', metavar='query', default='', help='query to run')
+    argp.add_argument('--stores', metavar='stores', default='', help='stores to check')
     argp.add_argument('-f', '--format', metavar='format', default='', help='query output format')
-    argp.add_argument('-w', '--warning', metavar='RANGE',
-                      help='warning threshold for query results, supported in following modes: ' + ", ".join(
-                          x for x in modes.keys() if modes[x][1]))
-    argp.add_argument('-c', '--critical', metavar='RANGE',
-                      help='critical threshold for query results, supported in following modes: ' + ", ".join(
-                          x for x in modes.keys() if modes[x][1]))
-    argp.add_argument('--warningtime', metavar='RANGE',
-                      help='warning threshold for execution time, supported in following modes: ' + ", ".join(
-                          x for x in modes.keys() if modes[x][2]))
-    argp.add_argument('--criticaltime', metavar='RANGE',
-                      help='critical threshold for execution time, supported in following modes: ' + ", ".join(
-                          x for x in modes.keys() if modes[x][2]))
+    argp.add_argument(
+        '-w', '--warning', metavar='RANGE',
+        help='warning threshold for query results, supported in following modes: '
+             + ", ".join(x for x in modes.keys() if modes[x][1]))
+    argp.add_argument(
+        '-c', '--critical', metavar='RANGE',
+        help='critical threshold for query results, supported in following modes: '
+             + ", ".join(x for x in modes.keys() if modes[x][1]))
+    argp.add_argument(
+        '--warningtime', metavar='RANGE',
+        help='warning threshold for execution time, supported in following modes: '
+             + ", ".join(x for x in modes.keys() if modes[x][2]))
+    argp.add_argument(
+        '--criticaltime', metavar='RANGE',
+        help='critical threshold for execution time, supported in following modes: '
+             + ", ".join(x for x in modes.keys() if modes[x][2]))
     args = argp.parse_args()
 
     m = re.match('^(dctm(s)?://((.*?)(:(.*))?@)?)?([^/:]+?)(:(\d+))?(/(\d+))?$', args.host)
