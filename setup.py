@@ -11,8 +11,11 @@ else:
 
 setup(
     name='dctmpy',
-    version='0.3.2',
-    packages=['dctmpy', 'dctmpy.net', 'dctmpy.obj', 'dctmpy.rpc', 'dctmpy.nagios'],
+    version='0.3.3',
+    packages=[
+        'dctmpy', 'dctmpy.net', 'dctmpy.obj', 'dctmpy.rpc',
+        'dctmpy.exceptions', 'dctmpy.crypto', 'dctmpy.nagios'
+    ],
     package_dir={'': 'src'},
     license='ZPL-2.1',
     url='https://github.com/andreybpanfilov/dctmpy',
