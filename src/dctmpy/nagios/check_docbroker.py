@@ -122,12 +122,13 @@ class CheckDocbroker(Resource):
                     continue
 
             # checking malicious docbases
-            for docbase in docbasemap['r_docbase_name']:
-                if docbase in servers:
-                    continue
-                message = "Malicious docbase %s is registered on %s:%d" % \
-                          (docbase, self.host, self.port)
-                self.add_result(Critical, message)
+            if self.fullmap:
+                for docbase in docbasemap['r_docbase_name']:
+                    if docbase in servers:
+                        continue
+                    message = "Malicious docbase %s is registered on %s:%d" % \
+                              (docbase, self.host, self.port)
+                    self.add_result(Critical, message)
 
         except Exception, e:
             message = "Failed to retrieve docbasemap: %s" % str(e)
