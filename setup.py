@@ -11,7 +11,7 @@ else:
 
 setup(
     name='dctmpy',
-    version='0.3.3',
+    version='0.3.4',
     packages=[
         'dctmpy', 'dctmpy.net', 'dctmpy.obj', 'dctmpy.rpc',
         'dctmpy.exceptions', 'dctmpy.crypto', 'dctmpy.nagios'
