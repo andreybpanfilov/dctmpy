@@ -42,12 +42,15 @@ class CheckDocbase(Resource):
                 return
             if self.mode == 'login':
                 return
-            results = modes[self.mode][0](self)
-            if not results:
-                return
-            for result in results:
-                if result:
-                    yield result
+            if not self.mode in modes:
+                self.add_result(Unknown, "Unknown mode")
+            else:
+                results = modes[self.mode][0](self)
+                if not results:
+                    return
+                for result in results:
+                    if result:
+                        yield result
         finally:
             try:
                 if self.session:
@@ -124,7 +127,7 @@ class CheckDocbase(Resource):
 
         index = servermap['r_server_name'].index(servername)
         status = servermap['r_last_status'][index]
-        docbaseid = servermap['i_docbase_id'][index]
+        docbaseid = servermap['i_docbase_id'][0]
         connaddr = servermap['i_server_connection_address'][index]
 
         if status != "Open":
